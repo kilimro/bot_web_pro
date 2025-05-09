@@ -201,7 +201,7 @@ const BotDetailPage: React.FC = () => {
                   <p className="text-gray-900">{bot.auth_key}</p>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-600 mb-1">微信ID</label>
+                  <label className="block text-sm font-medium text-gray-600 mb-1">botID</label>
                   <p className="text-gray-900">{bot.wxid || '未登录'}</p>
                 </div>
                 <div>
@@ -369,7 +369,7 @@ const BotDetailPage: React.FC = () => {
                     }`}
                   >
                     <Footprints size={18} className="mr-2" />
-                    修改微信步数
+                    修改bot步数
                   </button>
                   
                   <button
@@ -422,7 +422,7 @@ const BotDetailPage: React.FC = () => {
       {showStepModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
-            <h3 className="text-lg font-medium mb-4">修改微信步数</h3>
+            <h3 className="text-lg font-medium mb-4">修改bot步数</h3>
             <div className="mb-4">
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 步数 (0-99999)

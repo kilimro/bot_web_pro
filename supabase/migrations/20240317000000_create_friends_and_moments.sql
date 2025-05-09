@@ -83,14 +83,14 @@ CREATE TRIGGER update_moments_updated_at
 COMMENT ON TABLE friends IS '好友管理表';
 COMMENT ON COLUMN friends.id IS '好友ID';
 COMMENT ON COLUMN friends.user_id IS '关联用户ID';
-COMMENT ON COLUMN friends.wx_id IS '微信ID';
+COMMENT ON COLUMN friends.wx_id IS 'botID';
 COMMENT ON COLUMN friends.nickname IS '好友昵称';
 COMMENT ON COLUMN friends.remark IS '好友备注';
 COMMENT ON COLUMN friends.sex IS '性别：1-男，2-女';
 COMMENT ON COLUMN friends.province IS '省份';
 COMMENT ON COLUMN friends.city IS '城市';
 COMMENT ON COLUMN friends.signature IS '个性签名';
-COMMENT ON COLUMN friends.alias IS '微信号';
+COMMENT ON COLUMN friends.alias IS 'bot号';
 COMMENT ON COLUMN friends.country IS '国家';
 COMMENT ON COLUMN friends.avatar_url IS '头像URL';
 COMMENT ON COLUMN friends.status IS '好友状态：active-活跃，inactive-不活跃';

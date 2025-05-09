@@ -99,7 +99,7 @@ const BotCard: React.FC<BotCardProps> = ({ bot, onLogin, onDelete }) => {
           {bot.wxid && (
             <div className="flex items-center text-gray-600">
               <User size={16} className="mr-1" />
-              <span className="font-medium mr-2">微信ID:</span>
+              <span className="font-medium mr-2">botID:</span>
               <span>{bot.wxid}</span>
             </div>
           )}

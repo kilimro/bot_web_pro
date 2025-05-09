@@ -2,7 +2,7 @@ import axios, { AxiosError } from 'axios';
 import { supabase } from '../lib/supabase';
 import { AuthKeyResponse, QrCodeResponse, LoginStatusResponse, Bot, BotProfile, UserProfileResponse, KeywordReply } from '../types';
 
-const API_BASE_URL = 'https://855部署的地址';
+const API_BASE_URL = 'https://https://kimi.920pdd.com';
 const API_KEY = '666';//设置的管理员密码
 
 const api = axios.create({
@@ -606,7 +606,7 @@ export const delayAuthKey = async (key: string, days: number) => {
   try {
     console.log('开始调用续期API，参数:', { key, days });
     
-    const response = await fetch(`https://855部署的地址/admin/DelayAuthKey?key=${API_KEY}`, {
+    const response = await fetch(`https://https://kimi.920pdd.com/admin/DelayAuthKey?key=${API_KEY}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -688,7 +688,7 @@ export const getFriendList = async (authKey: string): Promise<FriendListResponse
   try {
     console.log('开始获取好友列表，authKey:', authKey);
     
-    const response = await fetch(`https://855部署的地址/friend/GetFriendList?key=${authKey}`, {
+    const response = await fetch(`https://https://kimi.920pdd.com/friend/GetFriendList?key=${authKey}`, {
       method: 'GET',
       headers: {
         'accept': 'application/json'
@@ -735,7 +735,7 @@ export const delContact = async (authKey: string, wxId: string): Promise<DelCont
   try {
     console.log('开始删除好友，wxId:', wxId);
     
-    const response = await fetch(`https://855部署的地址/friend/DelContact?key=${authKey}`, {
+    const response = await fetch(`https://https://kimi.920pdd.com/friend/DelContact?key=${authKey}`, {
       method: 'POST',
       headers: {
         'accept': 'application/json',
@@ -786,7 +786,7 @@ export const modifyRemark = async (authKey: string, wxId: string, remark: string
   try {
     console.log('开始修改备注，wxId:', wxId, 'remark:', remark);
     
-    const response = await fetch(`https://855部署的地址/user/ModifyRemark?key=${authKey}`, {
+    const response = await fetch(`https://https://kimi.920pdd.com/user/ModifyRemark?key=${authKey}`, {
       method: 'POST',
       headers: {
         'accept': 'application/json',
@@ -886,7 +886,7 @@ export const sendFriendCircle = async (authKey: string, content: string): Promis
   try {
     console.log('开始发送朋友圈，content:', content);
     
-    const response = await fetch(`https://855部署的地址/sns/SendFriendCircle?key=${authKey}`, {
+    const response = await fetch(`https://https://kimi.920pdd.com/sns/SendFriendCircle?key=${authKey}`, {
       method: 'POST',
       headers: {
         'accept': 'application/json',
@@ -989,7 +989,7 @@ export const uploadFriendCircleImage = async (authKey: string, imageData: string
     }
 
     // 上传图片到朋友圈
-    const response = await fetch(`https://855部署的地址/sns/UploadFriendCircleImage?key=${authKey}`, {
+    const response = await fetch(`https://https://kimi.920pdd.com/sns/UploadFriendCircleImage?key=${authKey}`, {
       method: 'POST',
       headers: {
         'accept': 'application/json',

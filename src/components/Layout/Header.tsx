@@ -45,7 +45,7 @@ const Header: React.FC<HeaderProps> = ({ toggleSidebar }) => {
           </button>
           <Link to="/dashboard" className="text-xl font-bold flex items-center">
             <Bot size={24} className="text-blue-300 mr-2" />
-            <span className="text-blue-300">微信</span>
+            <span className="text-blue-300">bot</span>
             <span className="ml-1">机器人管理平台</span>
           </Link>
           {getPageTitle() && (

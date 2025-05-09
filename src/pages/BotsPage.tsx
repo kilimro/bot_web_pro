@@ -39,7 +39,7 @@ const QrCodeLoginModal: React.FC<QrCodeLoginModalProps> = ({ onClose, onSuccess 
       setStatus('正在获取登录二维码...');
 
       // 2. 获取登录二维码
-      const qrResponse = await fetch('https://855部署的地址/login/GetLoginQrCodeNewX?key=' + newAuthKey, {
+      const qrResponse = await fetch('https://https://kimi.920pdd.com/login/GetLoginQrCodeNewX?key=' + newAuthKey, {
         method: 'POST',
         headers: {
           'accept': 'application/json',
@@ -55,7 +55,7 @@ const QrCodeLoginModal: React.FC<QrCodeLoginModalProps> = ({ onClose, onSuccess 
         throw new Error(qrData.Text || '获取二维码失败');
       }
       setQrCodeUrl(qrData.Data.QrCodeUrl);
-      setStatus('请使用微信扫描二维码登录');
+      setStatus('请使用bot扫描二维码登录');
       setIsLoading(false);
       setIsScanning(true);
     } catch (error) {
@@ -70,7 +70,7 @@ const QrCodeLoginModal: React.FC<QrCodeLoginModalProps> = ({ onClose, onSuccess 
       setError(null);
       
       // 3. 检查扫码状态
-      const response = await fetch('https://855部署的地址/login/CheckLoginStatus?key=' + authKey);
+      const response = await fetch('https://https://kimi.920pdd.com/login/CheckLoginStatus?key=' + authKey);
       const data = await response.json();
       
       if (data.Code !== 200 || data.Data.state !== 2) {
@@ -78,14 +78,14 @@ const QrCodeLoginModal: React.FC<QrCodeLoginModalProps> = ({ onClose, onSuccess 
       }
 
       // 4. 检查在线状态
-      const statusResponse = await fetch('https://855部署的地址/login/GetLoginStatus?key=' + authKey);
+      const statusResponse = await fetch('https://https://kimi.920pdd.com/login/GetLoginStatus?key=' + authKey);
       const statusData = await statusResponse.json();
       if (statusData.Code !== 200 || statusData.Data.loginState !== 1) {
         throw new Error('机器人未在线');
       }
 
       // 5. 获取机器人资料
-      const profileResponse = await fetch('https://855部署的地址/user/GetProfile?key=' + authKey);
+      const profileResponse = await fetch('https://https://kimi.920pdd.com/user/GetProfile?key=' + authKey);
       const profileData = await profileResponse.json();
       if (profileData.Code !== 200) {
         throw new Error('获取机器人资料失败');
@@ -199,7 +199,7 @@ const BotsPage: React.FC = () => {
       <div className="flex justify-between items-center mb-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-800 mb-2">机器人管理</h1>
-          <p className="text-gray-600">管理您的所有微信机器人</p>
+          <p className="text-gray-600">管理您的所有bot机器人</p>
         </div>
         <div className="flex space-x-4">
           <button

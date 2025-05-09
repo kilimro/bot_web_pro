@@ -85,7 +85,7 @@ const QrCodeLogin: React.FC<QrCodeLoginProps> = ({ authKey, botId, onClose, onLo
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-lg shadow-xl max-w-md w-full overflow-hidden animate-fade-in">
         <div className="bg-blue-800 text-white px-4 py-3 flex justify-between items-center">
-          <h3 className="font-medium">微信机器人登录</h3>
+          <h3 className="font-medium">bot机器人登录</h3>
           <button 
             onClick={onClose} 
             className="text-white hover:text-gray-200 focus:outline-none"
@@ -113,11 +113,11 @@ const QrCodeLogin: React.FC<QrCodeLoginProps> = ({ authKey, botId, onClose, onLo
             </div>
           ) : (
             <div className="text-center">
-              <p className="mb-4 text-gray-700">请使用微信扫描以下二维码登录</p>
+              <p className="mb-4 text-gray-700">请使用bot扫描以下二维码登录</p>
               <div className="mb-6 flex justify-center">
                 <img 
                   src={qrCodeUrl} 
-                  alt="微信登录二维码" 
+                  alt="bot登录二维码" 
                   className="max-w-full h-auto border p-2 rounded-lg shadow-sm" 
                   style={{ maxWidth: '200px' }}
                 />

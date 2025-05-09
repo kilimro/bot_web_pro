@@ -12,9 +12,9 @@ interface SystemSettings {
 
 const SettingsPage: React.FC = () => {
   const [settings, setSettings] = useState<SystemSettings>({
-    systemName: '微信机器人管理平台',
-    apiBaseUrl: 'https://855部署的地址',
-    wsBaseUrl: 'wss://855部署的地址/ws',
+    systemName: 'bot机器人管理平台',
+    apiBaseUrl: 'https://https://kimi.920pdd.com',
+    wsBaseUrl: 'wss://https://kimi.920pdd.com/ws',
     adminUsername: 'admin',
     adminPassword: '',
   });

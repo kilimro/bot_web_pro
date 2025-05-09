@@ -289,7 +289,7 @@ const FriendsPage: React.FC = () => {
       ),
     },
     {
-      title: '微信ID',
+      title: 'botID',
       dataIndex: 'wx_id',
       key: 'wx_id',
       ...getColumnSearchProps('wx_id'),

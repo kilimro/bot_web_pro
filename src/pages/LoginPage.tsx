@@ -25,8 +25,8 @@ const LoginPage: React.FC = () => {
               <BotIcon size={40} className="text-blue-400" />
             </div>
           </div>
-          <h1 className="text-3xl font-bold text-white mb-2">微信机器人管理平台</h1>
-          <p className="text-blue-200">专业的微信机器人管理与监控解决方案</p>
+          <h1 className="text-3xl font-bold text-white mb-2">bot机器人管理平台</h1>
+          <p className="text-blue-200">专业的bot机器人管理与监控解决方案</p>
         </div>
         <LoginForm />
       </div>

@@ -16,7 +16,7 @@ interface BotStatus {
 
 const getBotOnlineStatus = async (key: string): Promise<Omit<BotStatus, 'id' | 'name' | 'key'>> => {
   try {
-    const res = await axios.get(`https://855部署的地址/login/GetLoginStatus?key=${key}`);
+    const res = await axios.get(`https://https://kimi.920pdd.com/login/GetLoginStatus?key=${key}`);
     if (res.data?.Code === 200 && res.data?.Data?.loginState === 1) {
       return {
         status: 'online' as const,

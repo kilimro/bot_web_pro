@@ -8,11 +8,11 @@ const os = require('os'); // 引入os模块
 require('dotenv').config();
 
 // 配置
-const WS_BASE_URL = 'wss://855部署的地址';
+const WS_BASE_URL = 'wss://https://kimi.920pdd.com';
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL;
 const SUPABASE_ANON_KEY = process.env.VITE_SUPABASE_ANON_KEY;
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
-const API_BASE_URL = 'https://855部署的地址';
+const API_BASE_URL = 'https://https://kimi.920pdd.com';
 const PORT = process.env.PORT || 3031;
 
 // 创建Express应用
