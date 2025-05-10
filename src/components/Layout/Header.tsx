@@ -46,7 +46,7 @@ const Header: React.FC<HeaderProps> = ({ toggleSidebar }) => {
           <Link to="/dashboard" className="text-xl font-bold flex items-center">
             <Bot size={24} className="text-blue-300 mr-2" />
             <span className="text-blue-300">bot</span>
-            <span className="ml-1">机器人管理平台</span>
+            <span className="ml-1">{import.meta.env.VITE_APP_NAME}</span>
           </Link>
           {getPageTitle() && (
             <>

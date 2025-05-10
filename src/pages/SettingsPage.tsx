@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Save, AlertTriangle } from 'lucide-react';
 import { updateAdminPassword } from '../services/api';
+import { useAuth } from '../context/AuthContext';
 
 interface SystemSettings {
   systemName: string;
@@ -10,11 +11,12 @@ interface SystemSettings {
 }
 
 const SettingsPage: React.FC = () => {
+  const { user } = useAuth();
   const [settings, setSettings] = useState<SystemSettings>({
-    systemName: 'bot机器人管理平台',
-    apiBaseUrl: 'https://kimi.920pdd.com',
-    wsBaseUrl: 'wss://kimi.920pdd.com/ws',
-    adminUsername: 'admin',
+    systemName: import.meta.env.VITE_APP_NAME,
+    apiBaseUrl: import.meta.env.VITE_API_BASE_URL,
+    wsBaseUrl: import.meta.env.VITE_WS_BASE_URL,
+    adminUsername: user?.email || '',
   });
 
   const [currentPassword, setCurrentPassword] = useState('');
@@ -23,6 +25,15 @@ const SettingsPage: React.FC = () => {
   const [showSaveSuccess, setShowSaveSuccess] = useState(false);
   const [showError, setShowError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    if (user?.email) {
+      setSettings(prev => ({
+        ...prev,
+        adminUsername: user.email
+      }));
+    }
+  }, [user]);
 
   const handlePasswordUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -80,9 +91,8 @@ const SettingsPage: React.FC = () => {
               <input
                 type="text"
                 value={settings.systemName}
-                onChange={(e) => setSettings({ ...settings, systemName: e.target.value })}
-                className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                required
+                className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-100"
+                disabled
               />
             </div>
 
@@ -93,9 +103,8 @@ const SettingsPage: React.FC = () => {
               <input
                 type="text"
                 value={settings.apiBaseUrl}
-                onChange={(e) => setSettings({ ...settings, apiBaseUrl: e.target.value })}
-                className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                required
+                className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-100"
+                disabled
               />
             </div>
 
@@ -106,9 +115,8 @@ const SettingsPage: React.FC = () => {
               <input
                 type="text"
                 value={settings.wsBaseUrl}
-                onChange={(e) => setSettings({ ...settings, wsBaseUrl: e.target.value })}
-                className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                required
+                className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-100"
+                disabled
               />
             </div>
           </div>
