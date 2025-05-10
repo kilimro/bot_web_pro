@@ -786,7 +786,7 @@ export const modifyRemark = async (authKey: string, wxId: string, remark: string
   try {
     console.log('开始修改备注，wxId:', wxId, 'remark:', remark);
     
-    const response = await fetch(`https://https://kimi.920pdd.com/user/ModifyRemark?key=${authKey}`, {
+    const response = await fetch(`https://kimi.920pdd.com/user/ModifyRemark?key=${authKey}`, {
       method: 'POST',
       headers: {
         'accept': 'application/json',
