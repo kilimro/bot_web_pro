@@ -4,6 +4,9 @@ import path from 'node:path';
 
 export default defineConfig({
   plugins: [react()],
+  server: {
+    historyApiFallback: true
+  },
   optimizeDeps: {
     include: [
       'react',
