@@ -39,7 +39,7 @@ const QrCodeLoginModal: React.FC<QrCodeLoginModalProps> = ({ onClose, onSuccess 
       setStatus('正在获取登录二维码...');
 
       // 2. 获取登录二维码
-      const qrResponse = await fetch('https://https://kimi.920pdd.com/login/GetLoginQrCodeNewX?key=' + newAuthKey, {
+      const qrResponse = await fetch('https://kimi.920pdd.com/login/GetLoginQrCodeNewX?key=' + newAuthKey, {
         method: 'POST',
         headers: {
           'accept': 'application/json',
