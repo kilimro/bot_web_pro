@@ -49,6 +49,26 @@ api.interceptors.response.use(
   }
 );
 
+export const uploadFriendCircleImage = async (authKey: string, imageData: string): Promise<string> => {
+  try {
+    const response = await api.post(`/moments/UploadImage?key=${authKey}`, {
+      ImageData: imageData
+    });
+    
+    if (response.data.Code !== 200) {
+      throw new Error(response.data.Text || '上传图片失败');
+    }
+    
+    return response.data.Data;
+  } catch (error) {
+    if (axios.isAxiosError(error) && error.code === 'ECONNABORTED') {
+      throw new Error('请求超时，请稍后重试');
+    }
+    console.error('上传朋友圈图片失败:', error);
+    throw error;
+  }
+};
+
 export const generateAuthKey = async (count: number = 1, days: number = 30): Promise<AuthKeyResponse> => {
   try {
     const response = await api.post(`/admin/GenAuthKey1?key=${API_KEY}`, {
