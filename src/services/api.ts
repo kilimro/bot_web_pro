@@ -49,6 +49,42 @@ api.interceptors.response.use(
   }
 );
 
+// 更新管理员密码
+export const updateAdminPassword = async (currentPassword: string, newPassword: string): Promise<void> => {
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      throw new Error('未登录');
+    }
+
+    // 验证当前密码
+    const { data, error } = await supabase
+      .rpc('verify_password', {
+        current_password: currentPassword
+      });
+
+    if (error) {
+      throw new Error('当前密码验证失败');
+    }
+
+    if (!data) {
+      throw new Error('当前密码不正确');
+    }
+
+    // 更新密码
+    const { error: updateError } = await supabase.auth.updateUser({
+      password: newPassword
+    });
+
+    if (updateError) {
+      throw new Error('密码更新失败');
+    }
+  } catch (error) {
+    console.error('更新密码失败:', error);
+    throw error;
+  }
+};
+
 export const generateAuthKey = async (count: number = 1, days: number = 30): Promise<AuthKeyResponse> => {
   try {
     const response = await api.post(`/admin/GenAuthKey1?key=${API_KEY}`, {
@@ -918,6 +954,8 @@ export const sendFriendCircle = async (authKey: string, content: string): Promis
       console.error('发送朋友圈API返回错误:', data);
       throw new Error(data.Text || '发送朋友圈失败');
     }
+
+    
 
     return data;
   } catch (error) {
