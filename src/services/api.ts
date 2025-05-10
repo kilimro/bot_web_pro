@@ -49,26 +49,6 @@ api.interceptors.response.use(
   }
 );
 
-export const uploadFriendCircleImage = async (authKey: string, imageData: string): Promise<string> => {
-  try {
-    const response = await api.post(`/moments/UploadImage?key=${authKey}`, {
-      ImageData: imageData
-    });
-    
-    if (response.data.Code !== 200) {
-      throw new Error(response.data.Text || '上传图片失败');
-    }
-    
-    return response.data.Data;
-  } catch (error) {
-    if (axios.isAxiosError(error) && error.code === 'ECONNABORTED') {
-      throw new Error('请求超时，请稍后重试');
-    }
-    console.error('上传朋友圈图片失败:', error);
-    throw error;
-  }
-};
-
 export const generateAuthKey = async (count: number = 1, days: number = 30): Promise<AuthKeyResponse> => {
   try {
     const response = await api.post(`/admin/GenAuthKey1?key=${API_KEY}`, {
@@ -514,6 +494,567 @@ export const deleteKeywordReply = async (id: string): Promise<void> => {
 
 interface AiModelConfig {
   id: string;
+  enabled: boolean;
+  name: string;
+  model: string;
+  base_url: string;
+  api_key: string;
+  system_prompt: string;
+  trigger_prefix: string;
+  block_list: string[];
+  send_type: 'all' | 'private' | 'group';
+  group_whitelist: string[];
+  enable_split_send: boolean;
+  split_send_interval: number;
+  reply_probability: number;
+  context_count: number;
+  user_id: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export const getAiModels = async (): Promise<AiModelConfig[]> => {
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.user?.id) {
+      throw new Error('未登录或会话已过期');
+    }
+
+    const { data, error } = await supabase
+      .from('ai_models')
+      .select('*')
+      .eq('user_id', session.user.id)
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    return data || [];
+  } catch (error) {
+    console.error('获取AI模型配置失败:', error);
+    throw error;
+  }
+};
+
+export const saveAiModels = async (models: Omit<AiModelConfig, 'id' | 'user_id' | 'created_at' | 'updated_at'>[]): Promise<AiModelConfig[]> => {
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.user?.id) {
+      throw new Error('未登录或会话已过期');
+    }
+
+    // 删除旧的配置
+    const { error: deleteError } = await supabase
+      .from('ai_models')
+      .delete()
+      .eq('user_id', session.user.id);
+
+    if (deleteError) throw deleteError;
+
+    // 插入新的配置
+    const modelsWithUserId = models.map(model => ({
+      ...model,
+      user_id: session.user.id
+    }));
+
+    const { data, error } = await supabase
+      .from('ai_models')
+      .insert(modelsWithUserId)
+      .select();
+
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    console.error('保存AI模型配置失败:', error);
+    throw error;
+  }
+};
+
+export const callAiModel = async (authKey: string, modelConfig: AiModelConfig, message: string, context: any[] = []): Promise<string> => {
+  try {
+    const messages = [
+      {
+        role: 'system',
+        content: modelConfig.system_prompt
+      },
+      ...context.map(msg => ({
+        role: msg.from_user === 'user' ? 'user' : 'assistant',
+        content: msg.content
+      })),
+      {
+        role: 'user',
+        content: message
+      }
+    ];
+
+    const response = await axios.post(`${modelConfig.base_url}/chat/completions`, {
+      model: modelConfig.model,
+      messages
+    }, {
+      headers: {
+        'Authorization': `Bearer ${modelConfig.api_key}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    return response.data.choices[0].message.content;
+  } catch (error) {
+    console.error('调用AI模型失败:', error);
+    throw error;
+  }
+};
+
+export const delayAuthKey = async (key: string, days: number) => {
+  try {
+    console.log('开始调用续期API，参数:', { key, days });
+    
+    const response = await fetch(`https://kimi.920pdd.com/admin/DelayAuthKey?key=${API_KEY}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'accept': 'application/json'
+      },
+      body: JSON.stringify({
+        Days: days,
+        ExpiryDate: "",
+        Key: key
+      })
+    });
+
+    console.log('API响应状态:', response.status);
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('API请求失败:', {
+        status: response.status,
+        statusText: response.statusText,
+        errorText
+      });
+      throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
+    }
+
+    const data = await response.json();
+    console.log('API响应数据:', data);
+    
+    if (data.Code !== 200) {
+      console.error('API返回错误:', data);
+      throw new Error(data.Text || '续期失败');
+    }
+
+    return data;
+  } catch (error) {
+    console.error('续期授权密钥失败:', error);
+    if (error instanceof Error) {
+      throw new Error(`续期失败: ${error.message}`);
+    }
+    throw new Error('续期失败: 未知错误');
+  }
+};
+
+export interface FriendListResponse {
+  Code: number;
+  Text?: string;
+  Data: {
+    IsInitFinished: boolean;
+    count: number;
+    friendList: Friend[];
+  };
+}
+
+export interface Friend {
+  userName: {
+    str: string;
+  };
+  nickName: {
+    str: string;
+  };
+  pyinitial: {
+    str: string;
+  };
+  quanPin: {
+    str: string;
+  };
+  sex: number;
+  province: string;
+  city: string;
+  signature: string;
+  alias: string;
+  country: string;
+  bigHeadImgUrl: string;
+  smallHeadImgUrl: string;
+  encryptUserName: string;
+  deleteFlag: number;
+}
+
+export const getFriendList = async (authKey: string): Promise<FriendListResponse> => {
+  try {
+    console.log('开始获取好友列表，authKey:', authKey);
+    
+    const response = await fetch(`https://kimi.920pdd.com/friend/GetFriendList?key=${authKey}`, {
+      method: 'GET',
+      headers: {
+        'accept': 'application/json'
+      }
+    });
+
+    console.log('API响应状态:', response.status);
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('API请求失败:', {
+        status: response.status,
+        statusText: response.statusText,
+        errorText
+      });
+      throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
+    }
+
+    const data = await response.json();
+    console.log('API响应数据:', data);
+    
+    if (data.Code !== 200) {
+      console.error('API返回错误:', data);
+      throw new Error(data.Text || '获取好友列表失败');
+    }
+
+    return data;
+  } catch (error) {
+    console.error('获取好友列表失败:', error);
+    if (error instanceof Error) {
+      throw new Error(`获取好友列表失败: ${error.message}`);
+    }
+    throw new Error('获取好友列表失败: 未知错误');
+  }
+};
+
+export interface DelContactResponse {
+  Code: number;
+  Data: Record<string, never>;
+  Text: string;
+}
+
+export const delContact = async (authKey: string, wxId: string): Promise<DelContactResponse> => {
+  try {
+    console.log('开始删除好友，wxId:', wxId);
+    
+    const response = await fetch(`https://kimi.920pdd.com/friend/DelContact?key=${authKey}`, {
+      method: 'POST',
+      headers: {
+        'accept': 'application/json',
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        DelUserName: wxId
+      })
+    });
+
+    console.log('删除好友API响应状态:', response.status);
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('删除好友API请求失败:', {
+        status: response.status,
+        statusText: response.statusText,
+        errorText
+      });
+      throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
+    }
+
+    const data = await response.json();
+    console.log('删除好友API响应数据:', data);
+    
+    if (data.Code !== 200) {
+      console.error('删除好友API返回错误:', data);
+      throw new Error(data.Text || '删除好友失败');
+    }
+
+    return data;
+  } catch (error) {
+    console.error('删除好友失败:', error);
+    if (error instanceof Error) {
+      throw new Error(`删除好友失败: ${error.message}`);
+    }
+    throw new Error('删除好友失败: 未知错误');
+  }
+};
+
+export interface ModifyRemarkResponse {
+  Code: number;
+  Data: null;
+  Text: string;
+}
+
+export const modifyRemark = async (authKey: string, wxId: string, remark: string): Promise<ModifyRemarkResponse> => {
+  try {
+    console.log('开始修改备注，wxId:', wxId, 'remark:', remark);
+    
+    const response = await fetch(`https://kimi.920pdd.com/user/ModifyRemark?key=${authKey}`, {
+      method: 'POST',
+      headers: {
+        'accept': 'application/json',
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        RemarkName: remark,
+        UserName: wxId
+      })
+    });
+
+    console.log('修改备注API响应状态:', response.status);
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('修改备注API请求失败:', {
+        status: response.status,
+        statusText: response.statusText,
+        errorText
+      });
+      throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
+    }
+
+    const data = await response.json();
+    console.log('修改备注API响应数据:', data);
+    
+    if (data.Code !== 200) {
+      console.error('修改备注API返回错误:', data);
+      throw new Error(data.Text || '修改备注失败');
+    }
+
+    return data;
+  } catch (error) {
+    console.error('修改备注失败:', error);
+    if (error instanceof Error) {
+      throw new Error(`修改备注失败: ${error.message}`);
+    }
+    throw new Error('修改备注失败: 未知错误');
+  }
+};
+
+export interface SendFriendCircleResponse {
+  Code: number;
+  Data: {
+    baseResponse: {
+      ret: number;
+      errMsg: Record<string, never>;
+    };
+    snsObject: {
+      id: number;
+      username: string;
+      nickname: string;
+      createTime: number;
+      objectDesc: {
+        len: number;
+        buffer: string;
+      };
+      likeFlag: number;
+      likeCount: number;
+      likeUserListCount: number;
+      commentCount: number;
+      commentUserListCount: number;
+      withUserCount: number;
+      withUserListCount: number;
+      extFlag: number;
+      noChange: number;
+      groupCount: number;
+      isNotRichText: number;
+      referId: number;
+      blackListCount: number;
+      deleteFlag: number;
+      groupUserCount: number;
+      objectOperations: {
+        len: number;
+      };
+      snsRedEnvelops: {
+        rewardCount: number;
+        resourceId: number;
+        reportId: number;
+        reportKey: number;
+      };
+      preDownloadInfo: {
+        preDownloadPercent: number;
+        preDownloadNetType: number;
+      };
+      weAppInfo: {
+        appId: number;
+        showType: number;
+        score: number;
+      };
+    };
+  };
+  Text: string;
+}
+
+export const sendFriendCircle = async (authKey: string, content: string): Promise<SendFriendCircleResponse> => {
+  try {
+    console.log('开始发送朋友圈，content:', content);
+    
+    const response = await fetch(`https://kimi.920pdd.com/sns/SendFriendCircle?key=${authKey}`, {
+      method: 'POST',
+      headers: {
+        'accept': 'application/json',
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        ContentStyle: 2,
+        Privacy: 0,
+        Content: content
+      })
+    });
+
+    console.log('发送朋友圈API响应状态:', response.status);
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('发送朋友圈API请求失败:', {
+        status: response.status,
+        statusText: response.statusText,
+        errorText
+      });
+      throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
+    }
+
+    const data = await response.json();
+    console.log('发送朋友圈API响应数据:', data);
+    
+    if (data.Code !== 200) {
+      console.error('发送朋友圈API返回错误:', data);
+      throw new Error(data.Text || '发送朋友圈失败');
+    }
+
+    return data;
+  } catch (error) {
+    console.error('发送朋友圈失败:', error);
+    if (error instanceof Error) {
+      throw new Error(`发送朋友圈失败: ${error.message}`);
+    }
+    throw new Error('发送朋友圈失败: 未知错误');
+  }
+};
+
+export interface UploadFriendCircleImageResponse {
+  Code: number;
+  Data: Array<{
+    imageId: string;
+    resp: {
+      Ver: number;
+      Seq: number;
+      RetCode: number;
+      FileKey: string;
+      RecvLen: number;
+      FileURL: string;
+      ThumbURL: string;
+      EnableQuic: number;
+      RetrySec: number;
+      IsRetry: number;
+      IsOverLoad: number;
+      IsGetCDN: number;
+      XClientIP: string;
+      ImageMD5: string;
+      ImageWidth: number;
+      ImageHeight: number;
+    };
+  }>;
+  Text: string;
+}
+
+export const uploadFriendCircleImage = async (authKey: string, imageData: string): Promise<UploadFriendCircleImageResponse> => {
+  try {
+    console.log('开始保存图片数据到数据库');
+    
+    // 先保存图片数据到数据库
+    const { data: savedImage, error: saveError } = await supabase
+      .from('temp_images')
+      .insert([{
+        image_data: imageData,
+        created_at: new Date().toISOString()
+      }])
+      .select()
+      .single();
+
+    if (saveError) {
+      console.error('保存图片数据失败:', saveError);
+      throw new Error('保存图片数据失败');
+    }
+
+    console.log('图片数据保存成功，开始上传到朋友圈');
+    
+    // 从数据库获取图片数据
+    const { data: imageRecord, error: fetchError } = await supabase
+      .from('temp_images')
+      .select('image_data')
+      .eq('id', savedImage.id)
+      .single();
+
+    if (fetchError || !imageRecord) {
+      console.error('获取图片数据失败:', fetchError);
+      throw new Error('获取图片数据失败');
+    }
+
+    // 上传图片到朋友圈
+    const response = await fetch(`https://kimi.920pdd.com/sns/UploadFriendCircleImage?key=${authKey}`, {
+      method: 'POST',
+      headers: {
+        'accept': 'application/json',
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        ImageDataList: [imageRecord.image_data],
+        VideoDataList: []
+      })
+    });
+
+    console.log('上传图片API响应状态:', response.status);
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('上传图片API请求失败:', {
+        status: response.status,
+        statusText: response.statusText,
+        errorText
+      });
+      throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
+    }
+
+    const data = await response.json();
+    console.log('上传图片API响应数据:', data);
+    
+    if (data.Code !== 200) {
+      console.error('上传图片API返回错误:', data);
+      throw new Error(data.Text || '上传图片失败');
+    }
+
+    // 检查响应数据结构
+    if (!data.Data || !Array.isArray(data.Data) || data.Data.length === 0) {
+      console.error('上传图片响应数据格式错误:', data);
+      throw new Error('上传图片失败: 响应数据格式错误');
+    }
+
+    const imageInfo = data.Data[0];
+    if (!imageInfo || !imageInfo.resp || !imageInfo.resp.FileURL) {
+      console.error('上传图片响应缺少必要字段:', imageInfo);
+      throw new Error('上传图片失败: 响应缺少必要字段');
+    }
+
+    // 上传成功后删除临时图片数据
+    const { error: deleteError } = await supabase
+      .from('temp_images')
+      .delete()
+      .eq('id', savedImage.id);
+
+    if (deleteError) {
+      console.error('删除临时图片数据失败:', deleteError);
+    }
+
+    return data;
+  } catch (error) {
+    console.error('上传图片失败:', error);
+    if (error instanceof Error) {
+      throw new Error(`上传图片失败: ${error.message}`);
+    }
+    throw new Error('上传图片失败: 未知错误');
+  }
+};
+
+export interface AIConfig {
+  id: string;
   user_id: string;
   name: string;
   model: string;
@@ -658,9 +1199,7 @@ export const generateText = async (config: AIConfig, prompt: string): Promise<st
   }
 };
 
-const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
-
-export const generateImage = async (config: AIConfig, prompt: string, retries = 3): Promise<string> => {
+export const generateImage = async (config: AIConfig, prompt: string): Promise<string> => {
   try {
     if (!config.image_base_url || !config.image_model || !config.image_api_key) {
       throw new Error('请先配置图片生成服务');
@@ -672,85 +1211,80 @@ export const generateImage = async (config: AIConfig, prompt: string, retries = 
       prompt: prompt
     });
 
-    let lastError: Error | null = null;
-    
-    for (let attempt = 1; attempt <= retries; attempt++) {
-      try {
-        const response = await fetch(`${config.image_base_url}/v1/images/generations`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${config.image_api_key}`
-          },
-          body: JSON.stringify({
-            model: config.image_model,
-            prompt: prompt,
-            n: 1,
-            size: '1024x1024',
-            quality: 'standard'
-          })
-        });
+    const response = await fetch(`${config.image_base_url}/v1/images/generations`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${config.image_api_key}`
+      },
+      body: JSON.stringify({
+        model: config.image_model,
+        prompt: prompt,
+        n: 1,
+        size: '1024x1024',
+        quality: 'standard'
+      })
+    });
 
-        if (!response.ok) {
-          const errorText = await response.text();
-          console.error(`尝试 ${attempt}/${retries} 失败:`, {
-            status: response.status,
-            statusText: response.statusText,
-            errorText
-          });
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('生成图片API响应错误:', {
+        status: response.status,
+        statusText: response.statusText,
+        errorText,
+        headers: Object.fromEntries(response.headers.entries())
+      });
 
-          if (response.status === 400) {
-            // Don't retry on validation errors
-            throw new Error(errorText);
-          }
-
-          lastError = new Error(`HTTP error! status: ${response.status}`);
-          
-          if (attempt < retries) {
-            // Wait before retrying, with exponential backoff
-            await sleep(Math.pow(2, attempt) * 1000);
-            continue;
-          }
-          throw lastError;
-        }
-
-        const data = await response.json();
-        console.log('生成图片成功，响应数据:', data);
-
-        if (!data.data?.[0]?.url) {
-          throw new Error('生成图片失败: 未获取到图片URL');
-        }
-
-        // Get the generated image
-        console.log('开始获取图片:', data.data[0].url);
-        const imageResponse = await fetch(data.data[0].url);
-
-        if (!imageResponse.ok) {
-          throw new Error(`获取图片失败: ${imageResponse.status}`);
-        }
-
-        const blob = await imageResponse.blob();
-        return new Promise((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onloadend = () => {
-            if (typeof reader.result === 'string') {
-              resolve(reader.result);
-            } else {
-              reject(new Error('Failed to convert image to base64'));
-            }
-          };
-          reader.onerror = () => reject(new Error('Failed to read image'));
-          reader.readAsDataURL(blob);
-        });
-
-      } catch (error) {
-        lastError = error instanceof Error ? error : new Error('Unknown error');
-        if (attempt === retries) throw lastError;
-        await sleep(Math.pow(2, attempt) * 1000);
+      if (response.status === 403) {
+        throw new Error('API密钥无效或权限不足，请检查配置');
+      } else if (response.status === 401) {
+        throw new Error('未授权访问，请检查API密钥');
+      } else if (response.status === 404) {
+        throw new Error('API端点不存在，请检查base_url配置');
+      } else {
+        throw new Error(`生成图片失败: ${response.status} ${response.statusText}`);
       }
     }
 
-    throw lastError || new Error('Failed to generate image after retries');
+    const data = await response.json();
+    console.log('生成图片成功，响应数据:', data);
+
+    if (!data.data?.[0]?.url) {
+      throw new Error('生成图片失败: 未获取到图片URL');
+    }
+
+    // Get the generated image
+    console.log('开始获取图片:', data.data[0].url);
+    const imageResponse = await fetch(data.data[0].url, {
+      headers: {
+        'Accept': 'image/*',
+        'Origin': window.location.origin,
+        'Referer': window.location.origin
+      }
+    });
+
+    if (!imageResponse.ok) {
+      console.error('获取图片失败:', {
+        status: imageResponse.status,
+        statusText: imageResponse.statusText,
+        headers: Object.fromEntries(imageResponse.headers.entries())
+      });
+      throw new Error(`获取图片失败: ${imageResponse.status} ${imageResponse.statusText}`);
+    }
+
+    const blob = await imageResponse.blob();
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        if (typeof reader.result === 'string') {
+          resolve(reader.result);
+        } else {
+          reject(new Error('Failed to convert image to base64'));
+        }
+      };
+      reader.onerror = () => reject(new Error('Failed to read image'));
+      reader.readAsDataURL(blob);
+    });
   } catch (error) {
     console.error('生成图片失败:', error);
     if (error instanceof Error) {
