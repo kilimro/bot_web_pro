@@ -8,6 +8,8 @@ import { Bot, LoginStatusResponse } from '../types';
 import { getBotList, generateAuthKey, createBot, deleteBot } from '../services/api';
 import { supabase } from '../lib/supabase';
 
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+
 interface QrCodeLoginModalProps {
   onClose: () => void;
   onSuccess: () => void;
@@ -39,7 +41,7 @@ const QrCodeLoginModal: React.FC<QrCodeLoginModalProps> = ({ onClose, onSuccess 
       setStatus('正在获取登录二维码...');
 
       // 2. 获取登录二维码
-      const qrResponse = await fetch('https://kimi.920pdd.com/login/GetLoginQrCodeNewX?key=' + newAuthKey, {
+      const qrResponse = await fetch(`${API_BASE_URL}/login/GetLoginQrCodeNewX?key=` + newAuthKey, {
         method: 'POST',
         headers: {
           'accept': 'application/json',
@@ -70,7 +72,7 @@ const QrCodeLoginModal: React.FC<QrCodeLoginModalProps> = ({ onClose, onSuccess 
       setError(null);
       
       // 3. 检查扫码状态
-      const response = await fetch('https://kimi.920pdd.com/login/CheckLoginStatus?key=' + authKey);
+      const response = await fetch(`${API_BASE_URL}/login/CheckLoginStatus?key=` + authKey);
       const data = await response.json();
       
       if (data.Code !== 200 || data.Data.state !== 2) {
@@ -78,14 +80,14 @@ const QrCodeLoginModal: React.FC<QrCodeLoginModalProps> = ({ onClose, onSuccess 
       }
 
       // 4. 检查在线状态
-      const statusResponse = await fetch('https://kimi.920pdd.com/login/GetLoginStatus?key=' + authKey);
+      const statusResponse = await fetch(`${API_BASE_URL}/login/GetLoginStatus?key=` + authKey);
       const statusData = await response.json();
       if (statusData.Code !== 200 || statusData.Data.loginState !== 1) {
         throw new Error('机器人未在线');
       }
 
       // 5. 获取机器人资料
-      const profileResponse = await fetch('https://kimi.920pdd.com/user/GetProfile?key=' + authKey);
+      const profileResponse = await fetch(`${API_BASE_URL}/user/GetProfile?key=` + authKey);
       const profileData = await profileResponse.json();
       if (profileData.Code !== 200) {
         throw new Error('获取机器人资料失败');

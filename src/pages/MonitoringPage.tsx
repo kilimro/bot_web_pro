@@ -3,6 +3,8 @@ import axios from 'axios';
 import { Bot, Activity, Wifi, WifiOff, RefreshCw } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+const API_SERVER_URL = import.meta.env.VITE_API_SERVER_URL;
 
 interface BotStatus {
   id: string;
@@ -16,7 +18,7 @@ interface BotStatus {
 
 const getBotOnlineStatus = async (key: string): Promise<Omit<BotStatus, 'id' | 'name' | 'key'>> => {
   try {
-    const res = await axios.get(`https://kimi.920pdd.com/login/GetLoginStatus?key=${key}`);
+    const res = await axios.get(`${API_BASE_URL}/login/GetLoginStatus?key=${key}`);
     if (res.data?.Code === 200 && res.data?.Data?.loginState === 1) {
       return {
         status: 'online' as const,
@@ -86,7 +88,7 @@ const MonitoringPage: React.FC = () => {
 
   const fetchLogs = async () => {
     try {
-      const res = await fetch('http://127.0.0.1:3031/wss_log');
+      const res = await fetch(`${API_SERVER_URL}/wss_log`);//后端日志地址
       const data = await res.json();
       setLogs(data);
     } catch (e) {
@@ -274,11 +276,11 @@ const MonitoringPage: React.FC = () => {
         <div className="p-4 overflow-x-auto">
           <table className="min-w-full text-sm border">
             <thead>
-              <tr>
+              {/* <tr>
                 <th className="px-2 py-1 border-b bg-gray-50 text-left">时间</th>
                 <th className="px-2 py-1 border-b bg-gray-50 text-left">类型</th>
                 <th className="px-2 py-1 border-b bg-gray-50 text-left">内容</th>
-              </tr>
+              </tr> */}
             </thead>
             <tbody>
               {logs.length === 0 ? (

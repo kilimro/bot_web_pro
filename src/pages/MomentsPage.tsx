@@ -23,6 +23,8 @@ interface CustomUploadFile extends UploadFile {
   thumbUrl?: string;
 }
 
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+
 const MomentsPage: React.FC = () => {
   const [moments, setMoments] = useState<Moment[]>([]);
   const [loading, setLoading] = useState(false);
@@ -180,6 +182,7 @@ const MomentsPage: React.FC = () => {
       }
 
       setGeneratingImage(true);
+      console.log('AI生成图片 prompt:', aiPrompt);
       const hide = message.loading('正在生成图片...');
 
       const imageData = await generateImage(aiConfig, aiPrompt);
@@ -376,7 +379,7 @@ const MomentsPage: React.FC = () => {
           Private: 0
         }));
 
-        const response = await fetch(`https://kimi.920pdd.com/sns/SendFriendCircle?key=${bots.auth_key}`, {
+        const response = await fetch(`${API_BASE_URL}/sns/SendFriendCircle?key=${bots.auth_key}`, {
           method: 'POST',
           headers: {
             'accept': 'application/json',

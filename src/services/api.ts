@@ -1257,7 +1257,7 @@ export const generateImage = async (config: AIConfig, prompt: string): Promise<s
         model: config.image_model,
         prompt: prompt,
         n: 1,
-        size: '1024x1024',
+        size: '512x512',
         quality: 'standard'
       })
     });
