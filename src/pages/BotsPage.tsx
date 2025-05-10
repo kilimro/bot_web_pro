@@ -70,7 +70,7 @@ const QrCodeLoginModal: React.FC<QrCodeLoginModalProps> = ({ onClose, onSuccess 
       setError(null);
       
       // 3. 检查扫码状态
-      const response = await fetch('https://https://kimi.920pdd.com/login/CheckLoginStatus?key=' + authKey);
+      const response = await fetch('https://kimi.920pdd.com/login/CheckLoginStatus?key=' + authKey);
       const data = await response.json();
       
       if (data.Code !== 200 || data.Data.state !== 2) {
@@ -78,14 +78,14 @@ const QrCodeLoginModal: React.FC<QrCodeLoginModalProps> = ({ onClose, onSuccess 
       }
 
       // 4. 检查在线状态
-      const statusResponse = await fetch('https://https://kimi.920pdd.com/login/GetLoginStatus?key=' + authKey);
+      const statusResponse = await fetch('https://kimi.920pdd.com/login/GetLoginStatus?key=' + authKey);
       const statusData = await statusResponse.json();
       if (statusData.Code !== 200 || statusData.Data.loginState !== 1) {
         throw new Error('机器人未在线');
       }
 
       // 5. 获取机器人资料
-      const profileResponse = await fetch('https://https://kimi.920pdd.com/user/GetProfile?key=' + authKey);
+      const profileResponse = await fetch('https://kimi.920pdd.com/user/GetProfile?key=' + authKey);
       const profileData = await profileResponse.json();
       if (profileData.Code !== 200) {
         throw new Error('获取机器人资料失败');
