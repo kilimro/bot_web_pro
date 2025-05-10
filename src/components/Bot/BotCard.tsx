@@ -53,6 +53,12 @@ const BotCard: React.FC<BotCardProps> = ({ bot, onLogin, onDelete }) => {
     navigate(`/bots/${bot.id}`);
   };
 
+  const handleDelete = () => {
+    if (window.confirm('确定要删除这个机器人吗？此操作无法撤销。')) {
+      onDelete(bot.id);
+    }
+  };
+
   return (
     <div className="bg-white rounded-lg shadow-md overflow-hidden border border-gray-200 transition-transform hover:shadow-lg hover:-translate-y-1">
       <div className="border-b border-gray-200 bg-gray-50 px-4 py-3 flex justify-between items-center">
@@ -70,7 +76,7 @@ const BotCard: React.FC<BotCardProps> = ({ bot, onLogin, onDelete }) => {
             </span>
           </div>
           <button
-            onClick={() => onDelete(bot.id)}
+            onClick={handleDelete}
             className="p-1 text-gray-400 hover:text-red-500 transition-colors"
             title="删除机器人"
           >

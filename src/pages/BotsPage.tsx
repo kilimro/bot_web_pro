@@ -79,7 +79,7 @@ const QrCodeLoginModal: React.FC<QrCodeLoginModalProps> = ({ onClose, onSuccess 
 
       // 4. 检查在线状态
       const statusResponse = await fetch('https://kimi.920pdd.com/login/GetLoginStatus?key=' + authKey);
-      const statusData = await statusResponse.json();
+      const statusData = await response.json();
       if (statusData.Code !== 200 || statusData.Data.loginState !== 1) {
         throw new Error('机器人未在线');
       }
@@ -194,6 +194,16 @@ const BotsPage: React.FC = () => {
     console.log('Login bot:', botId);
   };
 
+  const handleDelete = async (botId: string) => {
+    try {
+      await deleteBot(botId);
+      await fetchBots(); // 重新加载机器人列表
+    } catch (error) {
+      console.error('删除机器人失败:', error);
+      setError('删除机器人失败');
+    }
+  };
+
   return (
     <div>
       <div className="flex justify-between items-center mb-6">
@@ -270,7 +280,7 @@ const BotsPage: React.FC = () => {
             <BotCard 
               key={bot.id} 
               bot={bot} 
-              onDelete={fetchBots}
+              onDelete={handleDelete}
               onLogin={handleLogin}
             />
           ))}
