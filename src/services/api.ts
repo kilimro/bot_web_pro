@@ -3,7 +3,7 @@ import { supabase } from '../lib/supabase';
 import { AuthKeyResponse, QrCodeResponse, LoginStatusResponse, Bot, BotProfile, UserProfileResponse, KeywordReply } from '../types';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
-const API_KEY = 'HG@520';//设置的管理员密码
+const API_KEY = import.meta.env.VITE_API_ADMIN_KEY;
 
 const api = axios.create({
   baseURL: API_BASE_URL,
