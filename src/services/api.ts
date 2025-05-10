@@ -688,7 +688,7 @@ export const getFriendList = async (authKey: string): Promise<FriendListResponse
   try {
     console.log('开始获取好友列表，authKey:', authKey);
     
-    const response = await fetch(`https://https://kimi.920pdd.com/friend/GetFriendList?key=${authKey}`, {
+    const response = await fetch(`https://kimi.920pdd.com/friend/GetFriendList?key=${authKey}`, {
       method: 'GET',
       headers: {
         'accept': 'application/json'
