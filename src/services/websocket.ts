@@ -3,7 +3,7 @@ import { supabase } from '../lib/supabase';
 import { sendTextMessage, sendImageMessage, sendVoiceMessage, callAiModel } from './api';
 
 // 配置
-const WS_BASE_URL = 'wss://kimi.920pdd.com';
+const WS_BASE_URL = import.meta.env.VITE_WS_BASE_URL;
 
 interface WsConnection {
   ws: WebSocket;
