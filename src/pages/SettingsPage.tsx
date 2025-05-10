@@ -13,8 +13,8 @@ interface SystemSettings {
 const SettingsPage: React.FC = () => {
   const [settings, setSettings] = useState<SystemSettings>({
     systemName: 'bot机器人管理平台',
-    apiBaseUrl: 'https://https://kimi.920pdd.com',
-    wsBaseUrl: 'wss://https://kimi.920pdd.com/ws',
+    apiBaseUrl: 'https://kimi.920pdd.com',
+    wsBaseUrl: 'wss://kimi.920pdd.com/ws',
     adminUsername: 'admin',
     adminPassword: '',
   });
