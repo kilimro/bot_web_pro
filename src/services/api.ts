@@ -989,7 +989,7 @@ export const uploadFriendCircleImage = async (authKey: string, imageData: string
     }
 
     // 上传图片到朋友圈
-    const response = await fetch(`https://https://kimi.920pdd.com/sns/UploadFriendCircleImage?key=${authKey}`, {
+    const response = await fetch(`https://kimi.920pdd.com/sns/UploadFriendCircleImage?key=${authKey}`, {
       method: 'POST',
       headers: {
         'accept': 'application/json',
