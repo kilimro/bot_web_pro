@@ -606,7 +606,7 @@ export const delayAuthKey = async (key: string, days: number) => {
   try {
     console.log('开始调用续期API，参数:', { key, days });
     
-    const response = await fetch(`https://https://kimi.920pdd.com/admin/DelayAuthKey?key=${API_KEY}`, {
+    const response = await fetch(`https://kimi.920pdd.com/admin/DelayAuthKey?key=${API_KEY}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
