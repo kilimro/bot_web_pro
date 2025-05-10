@@ -886,7 +886,7 @@ export const sendFriendCircle = async (authKey: string, content: string): Promis
   try {
     console.log('开始发送朋友圈，content:', content);
     
-    const response = await fetch(`https://https://kimi.920pdd.com/sns/SendFriendCircle?key=${authKey}`, {
+    const response = await fetch(`https://kimi.920pdd.com/sns/SendFriendCircle?key=${authKey}`, {
       method: 'POST',
       headers: {
         'accept': 'application/json',
