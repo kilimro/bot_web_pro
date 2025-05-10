@@ -735,7 +735,7 @@ export const delContact = async (authKey: string, wxId: string): Promise<DelCont
   try {
     console.log('开始删除好友，wxId:', wxId);
     
-    const response = await fetch(`https://https://kimi.920pdd.com/friend/DelContact?key=${authKey}`, {
+    const response = await fetch(`https://kimi.920pdd.com/friend/DelContact?key=${authKey}`, {
       method: 'POST',
       headers: {
         'accept': 'application/json',
