@@ -376,7 +376,7 @@ const MomentsPage: React.FC = () => {
           Private: 0
         }));
 
-        const response = await fetch(`https://https://kimi.920pdd.com/sns/SendFriendCircle?key=${bots.auth_key}`, {
+        const response = await fetch(`https://kimi.920pdd.com/sns/SendFriendCircle?key=${bots.auth_key}`, {
           method: 'POST',
           headers: {
             'accept': 'application/json',
