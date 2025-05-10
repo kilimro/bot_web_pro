@@ -1221,7 +1221,7 @@ export const generateImage = async (config: AIConfig, prompt: string): Promise<s
         model: config.image_model,
         prompt: prompt,
         n: 1,
-        size: '256x256',
+        size: '1024x1024',
         quality: 'standard'
       })
     });
@@ -1253,7 +1253,7 @@ export const generateImage = async (config: AIConfig, prompt: string): Promise<s
       throw new Error('生成图片失败: 未获取到图片URL');
     }
 
-    // 获取图片并压缩
+    // Get the generated image
     console.log('开始获取图片:', data.data[0].url);
     const imageResponse = await fetch(data.data[0].url, {
       headers: {
@@ -1273,54 +1273,17 @@ export const generateImage = async (config: AIConfig, prompt: string): Promise<s
     }
 
     const blob = await imageResponse.blob();
-    console.log('原始图片大小:', blob.size);
-
-    // 创建图片对象进行压缩
-    const img = new Image();
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
-
     return new Promise((resolve, reject) => {
-      img.onload = () => {
-        try {
-          // 设置更小的压缩尺寸
-          const maxWidth = 400;
-          const maxHeight = 400;
-          let width = img.width;
-          let height = img.height;
-
-          if (width > height) {
-            if (width > maxWidth) {
-              height = Math.round((height * maxWidth) / width);
-              width = maxWidth;
-            }
-          } else {
-            if (height > maxHeight) {
-              width = Math.round((width * maxHeight) / height);
-              height = maxHeight;
-            }
-          }
-
-          canvas.width = width;
-          canvas.height = height;
-          ctx?.drawImage(img, 0, 0, width, height);
-
-          // 使用更低的压缩质量
-          const compressedBase64 = canvas.toDataURL('image/jpeg', 0.5);
-          console.log('压缩后的base64大小:', compressedBase64.length);
-          resolve(compressedBase64);
-        } catch (error) {
-          console.error('图片压缩失败:', error);
-          reject(new Error('图片压缩失败'));
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        if (typeof reader.result === 'string') {
+          resolve(reader.result);
+        } else {
+          reject(new Error('Failed to convert image to base64'));
         }
       };
-
-      img.onerror = (error) => {
-        console.error('图片加载失败:', error);
-        reject(new Error('图片加载失败'));
-      };
-
-      img.src = URL.createObjectURL(blob);
+      reader.onerror = () => reject(new Error('Failed to read image'));
+      reader.readAsDataURL(blob);
     });
   } catch (error) {
     console.error('生成图片失败:', error);
