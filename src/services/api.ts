@@ -2,7 +2,7 @@ import axios, { AxiosError } from 'axios';
 import { supabase } from '../lib/supabase';
 import { AuthKeyResponse, QrCodeResponse, LoginStatusResponse, Bot, BotProfile, UserProfileResponse, KeywordReply } from '../types';
 
-const API_BASE_URL = 'https://https://kimi.920pdd.com';
+const API_BASE_URL = 'https://kimi.920pdd.com';
 const API_KEY = '666';//设置的管理员密码
 
 const api = axios.create({
