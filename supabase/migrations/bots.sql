@@ -1,33 +1,4 @@
-/*
-  # Create bot management tables
-
-  1. New Tables
-    - `bots`
-      - `id` (uuid, primary key)
-      - `auth_key` (text, unique)
-      - `status` (text)
-      - `wxid` (text)
-      - `nickname` (text)
-      - `avatar_url` (text)
-      - `created_at` (timestamp)
-      - `last_active_at` (timestamp)
-      - `user_id` (uuid, foreign key)
-    
-    - `bot_events`
-      - `id` (uuid, primary key)
-      - `bot_id` (uuid, foreign key)
-      - `event_type` (text)
-      - `message` (text)
-      - `details` (jsonb)
-      - `created_at` (timestamp)
-
-  2. Security
-    - Enable RLS on both tables
-    - Add policies for authenticated users to:
-      - Read their own bots and events
-      - Create/update their own bots and events
-*/
-
+DROP TABLE IF EXISTS bots CASCADE;
 -- Create bots table
 CREATE TABLE IF NOT EXISTS bots (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),

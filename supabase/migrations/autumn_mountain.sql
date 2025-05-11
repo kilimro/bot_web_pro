@@ -16,6 +16,10 @@
 */
 
 -- 创建用户表
+-- Enable pgcrypto extension if not enabled
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+
+-- 创建用户表
 CREATE TABLE IF NOT EXISTS users (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   email text UNIQUE NOT NULL,
@@ -28,8 +32,11 @@ CREATE TABLE IF NOT EXISTS users (
 -- 启用RLS
 ALTER TABLE users ENABLE ROW LEVEL SECURITY;
 
+-- Drop existing function first
+DROP FUNCTION IF EXISTS authenticate_user(text, text);
+
 -- 创建认证函数
-CREATE OR REPLACE FUNCTION authenticate_user(
+CREATE FUNCTION authenticate_user(
   p_email text,
   p_password text
 ) RETURNS TABLE (
@@ -66,7 +73,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- 添加初始用户
+-- Add initial user with correct credentials
+DELETE FROM users WHERE email = 'haige@qq.com';
 INSERT INTO users (email, password_hash)
-VALUES ('haige@qq.com', crypt('admin123', gen_salt('bf')))
-ON CONFLICT (email) DO NOTHING;
+VALUES ('haige@qq.com', crypt('admin123', gen_salt('bf')));

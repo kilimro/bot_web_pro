@@ -17,7 +17,8 @@ CREATE TABLE IF NOT EXISTS ai_models (
     context_count INTEGER DEFAULT 0 CHECK (context_count BETWEEN 0 AND 20),
     user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+    at_reply_enabled BOOLEAN DEFAULT false -- 新增字段
 );
 
 -- 创建索引
@@ -78,4 +79,5 @@ COMMENT ON COLUMN ai_models.reply_probability IS '回复概率（1-100）';
 COMMENT ON COLUMN ai_models.context_count IS '上下文消息数量（0-20）';
 COMMENT ON COLUMN ai_models.user_id IS '关联的用户ID';
 COMMENT ON COLUMN ai_models.created_at IS '创建时间';
-COMMENT ON COLUMN ai_models.updated_at IS '更新时间'; 
+COMMENT ON COLUMN ai_models.updated_at IS '更新时间';
+COMMENT ON COLUMN ai_models.at_reply_enabled IS '是否启用@回复';
