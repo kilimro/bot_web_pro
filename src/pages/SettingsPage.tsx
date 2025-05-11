@@ -59,10 +59,20 @@ const SettingsPage: React.FC = () => {
   };
 
   return (
-    <div>
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-800 mb-2">系统设置</h1>
-        <p className="text-gray-600">配置系统基本参数和功能</p>
+    <div className="max-w-3xl mx-auto px-2 md:px-6 py-8">
+      <div className="flex items-center justify-between mb-10">
+        <div className="flex items-center gap-5">
+          <div className="h-12 w-2 rounded bg-gradient-to-b from-blue-500 to-purple-400 mr-2" />
+          <div className="flex items-center gap-4">
+            <div className="bg-blue-100 text-blue-500 rounded-full p-4 shadow-sm">
+              <Save size={20} />
+            </div>
+            <div>
+              <div className="text-2xl font-bold text-gray-900 tracking-tight">系统设置</div>
+              <div className="text-gray-400 text-sm mt-1">配置系统基本参数和功能</div>
+            </div>
+          </div>
+        </div>
       </div>
 
       {showSaveSuccess && (
@@ -78,12 +88,14 @@ const SettingsPage: React.FC = () => {
         </div>
       )}
 
-      <div className="space-y-6">
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-          <div className="px-6 py-4 bg-gray-50 border-b border-gray-200">
-            <h2 className="font-bold text-gray-800">基本设置</h2>
+      <div className="space-y-10">
+        <div className="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
+          <div className="h-1 bg-gradient-to-r from-blue-500 to-purple-400 w-full" />
+          <div className="px-6 py-4 bg-gray-50 border-b border-gray-100 flex items-center gap-2">
+            <Save size={20} className="text-blue-500" />
+            <h2 className="font-bold text-lg text-gray-800 tracking-wide">基本设置</h2>
           </div>
-          <div className="p-6 space-y-4">
+          <div className="p-8 space-y-6">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 系统名称
@@ -122,11 +134,13 @@ const SettingsPage: React.FC = () => {
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-          <div className="px-6 py-4 bg-gray-50 border-b border-gray-200">
-            <h2 className="font-bold text-gray-800">管理员账号</h2>
+        <div className="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
+          <div className="h-1 bg-gradient-to-r from-blue-500 to-purple-400 w-full" />
+          <div className="px-6 py-4 bg-gray-50 border-b border-gray-100 flex items-center gap-2">
+            <AlertTriangle size={20} className="text-blue-500" />
+            <h2 className="font-bold text-lg text-gray-800 tracking-wide">管理员账号</h2>
           </div>
-          <form onSubmit={handlePasswordUpdate} className="p-6 space-y-4">
+          <form onSubmit={handlePasswordUpdate} className="p-8 space-y-6">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 管理员用户名
@@ -181,11 +195,11 @@ const SettingsPage: React.FC = () => {
             <button
               type="submit"
               disabled={isLoading}
-              className={`px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors flex items-center ${
+              className={`px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-500 text-white rounded-xl font-bold shadow hover:scale-105 hover:shadow-xl transition-all flex items-center gap-2 ${
                 isLoading ? 'opacity-50 cursor-not-allowed' : ''
               }`}
             >
-              <Save size={18} className="mr-2" />
+              <Save size={20} />
               {isLoading ? '保存中...' : '更新密码'}
             </button>
           </form>

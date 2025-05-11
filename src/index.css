@@ -2,7 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
-@keyframes gradient {
+/* @keyframes gradient {
   0% {
     background-position: 0% 50%;
   }
@@ -17,4 +17,18 @@
 .animate-gradient {
   background-size: 400% 400%;
   animation: gradient 15s ease infinite;
+} */
+/* body {
+  background: none !important;
+} */
+/* 隐藏滚动条通用写法 */
+.hide-scrollbar {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE 10+ */
 }
+.hide-scrollbar::-webkit-scrollbar {
+  display: none; /* Chrome/Safari/Webkit */
+}
+   body {
+     background: none !important;
+   }

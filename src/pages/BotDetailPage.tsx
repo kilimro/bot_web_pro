@@ -15,7 +15,7 @@ const BotDetailPage: React.FC = () => {
   const [refreshing, setRefreshing] = useState(false);
 
   // 新增状态
-  const [stepNumber, setStepNumber] = useState<number>(0);
+  const [stepNumber, setStepNumber] = useState<string>('');
   const [patValue, setPatValue] = useState<string>('');
   const [showStepModal, setShowStepModal] = useState(false);
   const [showPatModal, setShowPatModal] = useState(false);
@@ -23,6 +23,9 @@ const BotDetailPage: React.FC = () => {
     step: false,
     pat: false
   });
+
+  // 在组件内顶部加全局提示状态
+  const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
   useEffect(() => {
     loadBotDetail();
@@ -102,24 +105,26 @@ const BotDetailPage: React.FC = () => {
   };
 
   const handleUpdateStepNumber = async () => {
-    if (!bot || stepNumber < 0 || stepNumber > 99999) return;
-    
+    if (!bot) return;
     try {
       setToolsLoading(prev => ({ ...prev, step: true }));
       setError('');
-      
-      const response = await updateStepNumber(bot.auth_key, stepNumber);
+      const response = await updateStepNumber(bot.auth_key, Number(stepNumber));
       if (response.Code === 200) {
         setShowStepModal(false);
-        setStepNumber(0);
+        setStepNumber('');
+        setToast({ type: 'success', message: '步数修改成功' });
       } else {
+        setToast({ type: 'error', message: response.Text || '修改步数失败' });
         throw new Error(response.Text || '修改步数失败');
       }
     } catch (error) {
+      setToast({ type: 'error', message: error instanceof Error ? error.message : '修改步数失败' });
       console.error('修改步数失败:', error);
       setError(error instanceof Error ? error.message : '修改步数失败');
     } finally {
       setToolsLoading(prev => ({ ...prev, step: false }));
+      setTimeout(() => setToast(null), 2000);
     }
   };
 
@@ -134,14 +139,18 @@ const BotDetailPage: React.FC = () => {
       if (response.Code === 200) {
         setShowPatModal(false);
         setPatValue('');
+        setToast({ type: 'success', message: '拍一拍设置成功' });
       } else {
+        setToast({ type: 'error', message: response.Text || '设置拍一拍失败' });
         throw new Error(response.Text || '设置拍一拍失败');
       }
     } catch (error) {
+      setToast({ type: 'error', message: error instanceof Error ? error.message : '设置拍一拍失败' });
       console.error('设置拍一拍失败:', error);
       setError(error instanceof Error ? error.message : '设置拍一拍失败');
     } finally {
       setToolsLoading(prev => ({ ...prev, pat: false }));
+      setTimeout(() => setToast(null), 2000);
     }
   };
 
@@ -162,19 +171,61 @@ const BotDetailPage: React.FC = () => {
   }
 
   return (
-    <div>
-      <div className="mb-6 flex justify-between items-start">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-800 mb-2">机器人详情</h1>
-          <p className="text-gray-600">查看和管理机器人的详细信息</p>
+    <div className="max-w-6xl mx-auto px-2 md:px-6 py-6">
+      {/* 顶部信息卡片 */}
+      <div className="flex flex-col md:flex-row items-center md:items-end bg-gradient-to-r from-blue-50 via-white to-purple-50 rounded-2xl shadow-lg border border-blue-100 p-6 mb-6 gap-6">
+        <div className="flex items-center gap-4 flex-1 min-w-0">
+          <div className="w-24 h-24 rounded-full bg-white border-4 border-blue-200 shadow flex items-center justify-center overflow-hidden">
+            {bot.avatar_url ? (
+              <img src={bot.avatar_url} alt={bot.nickname || '机器人头像'} className="w-full h-full object-cover" />
+            ) : (
+              <Bot size={48} className="text-blue-300" />
+            )}
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 mb-1">
+              <h1 className="text-2xl font-bold text-gray-900 truncate">{bot.nickname || '未设置昵称'}</h1>
+              <span className={`px-2 py-0.5 text-xs rounded-full font-medium ${
+                bot.status === 'online'
+                  ? 'bg-green-100 text-green-700'
+                  : bot.status === 'authenticating'
+                  ? 'bg-yellow-100 text-yellow-700'
+                  : 'bg-gray-200 text-gray-500'
+              }`}>
+                {bot.status === 'online' ? '在线' : bot.status === 'authenticating' ? '验证中' : '离线'}
+              </span>
+            </div>
+            <div className="text-gray-500 text-sm truncate">ID: {bot.id}</div>
+            <div className="text-gray-500 text-sm truncate">botID: {bot.wxid || '未登录'}</div>
+          </div>
         </div>
-        <button
-          onClick={() => setShowDeleteConfirm(true)}
-          className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors flex items-center"
-        >
-          <Trash2 size={18} className="mr-2" />
-          删除机器人
-        </button>
+        {/* 操作按钮区：竖直排列 */}
+        <div className="flex flex-col gap-2 md:items-end w-full md:w-auto max-w-xs">
+          <button
+            onClick={() => setShowDeleteConfirm(true)}
+            className="px-3 py-1.5 border border-red-400 text-red-500 bg-white rounded-md hover:bg-red-50 hover:text-red-700 transition-colors flex items-center shadow w-full text-sm font-medium"
+          >
+            <Trash2 size={15} className="mr-1" />删除
+          </button>
+          <button
+            onClick={() => setShowStepModal(true)}
+            disabled={bot.status !== 'online'}
+            className={`px-3 py-1.5 bg-blue-600 text-white rounded-md transition-colors flex items-center justify-center font-medium shadow w-full text-sm ${
+              bot.status !== 'online' ? 'opacity-50 cursor-not-allowed' : 'hover:bg-blue-700'
+            }`}
+          >
+            <Footprints size={15} className="mr-1" />步数
+          </button>
+          <button
+            onClick={() => setShowPatModal(true)}
+            disabled={bot.status !== 'online'}
+            className={`px-3 py-1.5 bg-green-600 text-white rounded-md transition-colors flex items-center justify-center font-medium shadow w-full text-sm ${
+              bot.status !== 'online' ? 'opacity-50 cursor-not-allowed' : 'hover:bg-green-700'
+            }`}
+          >
+            <Hand size={15} className="mr-1" />拍一拍
+          </button>
+        </div>
       </div>
 
       {error && (
@@ -184,99 +235,59 @@ const BotDetailPage: React.FC = () => {
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2">
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-            <div className="px-6 py-4 bg-gray-50 border-b border-gray-200">
-              <h2 className="font-bold text-gray-800">基本信息</h2>
+      {/* 页面顶部全局toast提示 */}
+      {toast && (
+        <div className={`fixed top-6 left-1/2 transform -translate-x-1/2 z-50 px-6 py-2 rounded shadow-lg text-white text-sm font-medium transition-all ${toast.type === 'success' ? 'bg-green-500' : 'bg-red-500'}`}
+          style={{ minWidth: '120px', textAlign: 'center' }}>
+          {toast.message}
+        </div>
+      )}
+
+      {/* 主体内容区，两栏自适应 */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {/* 左侧/上方：基本信息+个人资料 */}
+        <div className="md:col-span-2 flex flex-col gap-6">
+          {/* 基本信息卡片 */}
+          <div className="bg-white rounded-xl shadow border border-gray-100 overflow-hidden">
+            <div className="px-5 py-3 bg-blue-50 border-b border-blue-100 flex items-center">
+              <h2 className="font-bold text-blue-800 text-base">基本信息</h2>
             </div>
-            <div className="p-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <label className="block text-sm font-medium text-gray-600 mb-1">机器人ID</label>
-                  <p className="text-gray-900">{bot.id}</p>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-600 mb-1">授权密钥</label>
-                  <p className="text-gray-900">{bot.auth_key}</p>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-600 mb-1">botID</label>
-                  <p className="text-gray-900">{bot.wxid || '未登录'}</p>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-600 mb-1">昵称</label>
-                  <p className="text-gray-900">{bot.nickname || '未设置'}</p>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-600 mb-1">创建时间</label>
-                  <p className="text-gray-900">
-                    {new Date(bot.created_at).toLocaleString('zh-CN')}
-                  </p>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-600 mb-1">最后活动</label>
-                  <p className="text-gray-900">
-                    {bot.last_active_at ? new Date(bot.last_active_at).toLocaleString('zh-CN') : '从未活动'}
-                  </p>
-                </div>
-              </div>
+            <div className="p-5 grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-3 text-sm">
+              <div><span className="text-gray-500">机器人ID：</span><span className="text-gray-900 break-all">{bot.id}</span></div>
+              <div><span className="text-gray-500">授权密钥：</span><span className="text-gray-900 break-all">{bot.auth_key}</span></div>
+              <div><span className="text-gray-500">botID：</span><span className="text-gray-900">{bot.wxid || '未登录'}</span></div>
+              <div><span className="text-gray-500">昵称：</span><span className="text-gray-900">{bot.nickname || '未设置'}</span></div>
+              <div><span className="text-gray-500">创建时间：</span><span className="text-gray-900">{new Date(bot.created_at).toLocaleString('zh-CN')}</span></div>
+              <div><span className="text-gray-500">最后活动：</span><span className="text-gray-900">{bot.last_active_at ? new Date(bot.last_active_at).toLocaleString('zh-CN') : '从未活动'}</span></div>
             </div>
           </div>
 
-          <div className="mt-6 bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-            <div className="px-6 py-4 bg-gray-50 border-b border-gray-200 flex justify-between items-center">
-              <h2 className="font-bold text-gray-800">个人资料</h2>
+          {/* 个人资料卡片 */}
+          <div className="bg-white rounded-xl shadow border border-gray-100 overflow-hidden">
+            <div className="px-5 py-3 bg-blue-50 border-b border-blue-100 flex items-center justify-between">
+              <h2 className="font-bold text-blue-800 text-base">个人资料</h2>
               {bot.status === 'online' && (
                 <button
                   onClick={handleRefreshProfile}
                   disabled={refreshing}
-                  className={`p-2 text-gray-500 hover:text-gray-700 transition-colors rounded-full ${
-                    refreshing ? 'animate-spin' : ''
-                  }`}
+                  className={`p-2 text-blue-500 hover:text-blue-700 transition-colors rounded-full ${refreshing ? 'animate-spin' : ''}`}
                   title="刷新资料"
                 >
                   <RefreshCw size={18} />
                 </button>
               )}
             </div>
-            <div className="p-6">
+            <div className="p-5">
               {profile ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-600 mb-1">用户名</label>
-                    <p className="text-gray-900">{profile.username}</p>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-600 mb-1">昵称</label>
-                    <p className="text-gray-900">{profile.nickname}</p>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-600 mb-1">QQ号</label>
-                    <p className="text-gray-900">{profile.bind_uin || '未绑定'}</p>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-600 mb-1">邮箱</label>
-                    <p className="text-gray-900">{profile.bind_email || '未绑定'}</p>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-600 mb-1">手机号</label>
-                    <p className="text-gray-900">{profile.bind_mobile || '未绑定'}</p>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-600 mb-1">性别</label>
-                    <p className="text-gray-900">
-                      {profile.sex === 1 ? '男' : profile.sex === 2 ? '女' : '未知'}
-                    </p>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-600 mb-1">等级</label>
-                    <p className="text-gray-900">{profile.level}</p>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-600 mb-1">经验值</label>
-                    <p className="text-gray-900">{profile.experience}</p>
-                  </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-3 text-sm">
+                  <div><span className="text-gray-500">用户名：</span><span className="text-gray-900">{profile.username}</span></div>
+                  <div><span className="text-gray-500">昵称：</span><span className="text-gray-900">{profile.nickname}</span></div>
+                  <div><span className="text-gray-500">QQ号：</span><span className="text-gray-900">{profile.bind_uin || '未绑定'}</span></div>
+                  <div><span className="text-gray-500">邮箱：</span><span className="text-gray-900">{profile.bind_email || '未绑定'}</span></div>
+                  <div><span className="text-gray-500">手机号：</span><span className="text-gray-900">{profile.bind_mobile || '未绑定'}</span></div>
+                  <div><span className="text-gray-500">性别：</span><span className="text-gray-900">{profile.sex === 1 ? '男' : profile.sex === 2 ? '女' : '未知'}</span></div>
+                  <div><span className="text-gray-500">等级：</span><span className="text-gray-900">{profile.level}</span></div>
+                  <div><span className="text-gray-500">经验值：</span><span className="text-gray-900">{profile.experience}</span></div>
                 </div>
               ) : (
                 <div className="text-center py-8 text-gray-500">
@@ -296,94 +307,28 @@ const BotDetailPage: React.FC = () => {
               )}
             </div>
           </div>
-
-          <div className="mt-6 bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-            <div className="px-6 py-4 bg-gray-50 border-b border-gray-200">
-              <h2 className="font-bold text-gray-800">功能配置</h2>
-            </div>
-            <div className="p-6">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <Link 
-                  to={`/bots/keyword-replies`}
-                  className="p-4 border rounded-lg hover:border-blue-500 cursor-pointer transition-colors"
-                >
-                  <h3 className="font-medium mb-2">关键词回复</h3>
-                  <p className="text-sm text-gray-600">配置自动回复规则</p>
-                </Link>
-                <Link 
-                  to={`/bots/plugins`}
-                  className="p-4 border rounded-lg hover:border-blue-500 cursor-pointer transition-colors"
-                >
-                  <h3 className="font-medium mb-2">插件中心</h3>
-                  <p className="text-sm text-gray-600">设置API调用规则</p>
-                </Link>
-                <Link 
-                  to={`/bots/ai-model`}
-                  className="p-4 border rounded-lg hover:border-blue-500 cursor-pointer transition-colors"
-                >
-                  <h3 className="font-medium mb-2">AI大模型</h3>
-                  <p className="text-sm text-gray-600">配置AI对话功能</p>
-                </Link>
-              </div>
-            </div>
-          </div>
         </div>
 
-        <div>
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-            <div className="px-6 py-4 bg-gray-50 border-b border-gray-200">
-              <h2 className="font-bold text-gray-800">状态信息</h2>
+        {/* 右侧/下方：功能配置+状态信息+操作按钮 */}
+        <div className="flex flex-col gap-6">
+          {/* 功能配置卡片 */}
+          <div className="bg-white rounded-xl shadow border border-gray-100 overflow-hidden">
+            <div className="px-5 py-3 bg-blue-50 border-b border-blue-100">
+              <h2 className="font-bold text-blue-800 text-base">功能配置</h2>
             </div>
-            <div className="p-6">
-              <div className="flex items-center justify-center mb-6">
-                {bot.avatar_url ? (
-                  <img 
-                    src={bot.avatar_url} 
-                    alt={bot.nickname || '机器人头像'} 
-                    className="w-24 h-24 rounded-full border-4 border-blue-100"
-                  />
-                ) : (
-                  <div className="w-24 h-24 rounded-full bg-gray-100 flex items-center justify-center">
-                    <Bot size={40} className="text-gray-400" />
-                  </div>
-                )}
-              </div>
-              
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-600 mb-1">当前状态</label>
-                  <div className={`flex items-center ${
-                    bot.status === 'online' ? 'text-green-600' : 'text-red-600'
-                  }`}>
-                    <span className="w-2 h-2 rounded-full bg-current mr-2"></span>
-                    <span>{bot.status === 'online' ? '在线' : '离线'}</span>
-                  </div>
-                </div>
-
-                <div className="mt-6 space-y-4">
-                  <button
-                    onClick={() => setShowStepModal(true)}
-                    disabled={bot.status !== 'online'}
-                    className={`w-full py-2 px-4 bg-blue-600 text-white rounded-md transition-colors flex items-center justify-center ${
-                      bot.status !== 'online' ? 'opacity-50 cursor-not-allowed' : 'hover:bg-blue-700'
-                    }`}
-                  >
-                    <Footprints size={18} className="mr-2" />
-                    修改bot步数
-                  </button>
-                  
-                  <button
-                    onClick={() => setShowPatModal(true)}
-                    disabled={bot.status !== 'online'}
-                    className={`w-full py-2 px-4 bg-green-600 text-white rounded-md transition-colors flex items-center justify-center ${
-                      bot.status !== 'online' ? 'opacity-50 cursor-not-allowed' : 'hover:bg-green-700'
-                    }`}
-                  >
-                    <Hand size={18} className="mr-2" />
-                    设置拍一拍
-                  </button>
-                </div>
-              </div>
+            <div className="p-5 grid grid-cols-1 gap-3">
+              <Link to={`/bots/keyword-replies`} className="p-3 border rounded-lg hover:border-blue-500 cursor-pointer transition-colors block">
+                <h3 className="font-medium mb-1">关键词回复</h3>
+                <p className="text-xs text-gray-600">配置自动回复规则</p>
+              </Link>
+              <Link to={`/bots/plugins`} className="p-3 border rounded-lg hover:border-blue-500 cursor-pointer transition-colors block">
+                <h3 className="font-medium mb-1">插件中心</h3>
+                <p className="text-xs text-gray-600">设置API调用规则</p>
+              </Link>
+              <Link to={`/bots/ai-model`} className="p-3 border rounded-lg hover:border-blue-500 cursor-pointer transition-colors block">
+                <h3 className="font-medium mb-1">AI大模型</h3>
+                <p className="text-xs text-gray-600">配置AI对话功能</p>
+              </Link>
             </div>
           </div>
         </div>
@@ -428,12 +373,11 @@ const BotDetailPage: React.FC = () => {
                 步数 (0-99999)
               </label>
               <input
-                type="number"
-                min="0"
-                max="99999"
+                type="text"
                 value={stepNumber}
-                onChange={(e) => setStepNumber(parseInt(e.target.value) || 0)}
+                onChange={(e) => setStepNumber(e.target.value)}
                 className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="请输入步数"
               />
             </div>
             <div className="flex justify-end space-x-4">

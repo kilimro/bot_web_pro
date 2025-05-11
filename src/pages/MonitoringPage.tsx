@@ -142,78 +142,100 @@ const MonitoringPage: React.FC = () => {
   }
 
   return (
-    <div>
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-800 mb-2">系统监控</h1>
-        <p className="text-gray-600">实时监控机器人运行状态和系统健康度</p>
-      </div>
-
-      {error && (
-        <div className="mb-6 p-4 bg-red-100 text-red-700 rounded-lg flex items-center">
-          {error}
+    <div className="max-w-6xl mx-auto px-2 md:px-6 py-6">
+      {/* 顶部标题和状态区美化 */}
+      <div className="flex items-center justify-between mb-8">
+        <div className="flex items-center gap-5">
+          <div className="h-12 w-2 rounded bg-gradient-to-b from-blue-500 to-purple-400 mr-2" />
+          <div className="flex items-center gap-4">
+            <div className="bg-blue-100 text-blue-500 rounded-full p-4 shadow-sm">
+              <Activity size={20} />
+            </div>
+            <div>
+              <div className="text-2xl font-bold text-gray-900 tracking-tight">系统监控</div>
+              <div className="text-gray-400 text-sm mt-1">实时监控机器人运行状态和系统健康度</div>
+            </div>
+          </div>
         </div>
+        <button
+          type="button"
+          onClick={loadBots}
+          className="bg-gradient-to-r from-blue-600 to-purple-500 border-0 rounded-xl font-bold shadow hover:scale-105 hover:shadow-xl transition-all px-6 py-2 text-white text-base flex items-center gap-2"
+        >
+          <RefreshCw size={18} /> 刷新数据
+        </button>
+      </div>
+      {/* 状态区块 */}
+      <div className="flex gap-5 mb-8 flex-wrap">
+        <div className="flex items-center bg-white rounded-2xl shadow-xl border border-gray-100 px-5 py-3 min-w-[160px]">
+          <Activity size={22} className={`mr-3 ${systemStatus === 'online' ? 'text-green-500' : systemStatus === 'partial' ? 'text-yellow-500' : 'text-red-500'}`} />
+          <span className={`text-lg font-semibold ${systemStatus === 'online' ? 'text-green-600' : systemStatus === 'partial' ? 'text-yellow-600' : 'text-red-600'}`}>{systemStatus === 'online' ? '系统正常' : systemStatus === 'partial' ? '部分异常' : '系统离线'}</span>
+        </div>
+        <div className="flex items-center bg-white rounded-2xl shadow-xl border border-gray-100 px-5 py-3 min-w-[160px]">
+          <div className={`w-3 h-3 rounded-full mr-3 ${systemStatus === 'online' ? 'bg-green-500' : systemStatus === 'partial' ? 'bg-yellow-500' : 'bg-red-500'}`}></div>
+          <span className="text-lg text-gray-700">WebSocket服务</span>
+          <span className={`ml-3 text-base ${systemStatus === 'online' ? 'text-green-600' : systemStatus === 'partial' ? 'text-yellow-600' : 'text-red-600'}`}>{systemStatus === 'online' ? '正常' : systemStatus === 'partial' ? '不稳定' : '离线'}</span>
+        </div>
+      </div>
+      {error && (
+        <div className="mb-6 p-3 bg-red-100 text-red-700 rounded text-sm flex items-center">{error}</div>
       )}
-
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 mb-6">
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden xl:col-span-2">
-          <div className="px-6 py-4 bg-gray-50 border-b border-gray-200 flex justify-between items-center">
-            <h2 className="font-bold text-gray-800">机器人状态监控</h2>
+      <div className="flex flex-col gap-8 mb-6">
+        {/* 机器人状态监控卡片美化 */}
+        <div className="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden flex flex-col">
+          <div className="h-1 bg-gradient-to-r from-blue-500 to-purple-400 w-full" />
+          <div className="px-6 py-3 flex justify-between items-center border-b border-gray-100 bg-gray-50">
+            <h2 className="font-bold text-lg text-gray-800 tracking-wide flex items-center gap-2">
+              <Bot size={20} className="text-blue-500" /> 机器人状态监控
+            </h2>
             <button 
               type="button"
               onClick={loadBots}
-              className="p-2 text-gray-500 hover:text-gray-700 transition-colors"
+              className="p-2 bg-gradient-to-r from-blue-600 to-purple-500 text-white hover:scale-110 transition-all rounded-full shadow"
               title="刷新数据"
             >
               <RefreshCw size={18} />
             </button>
           </div>
           <div className="overflow-x-auto">
-            <table className="min-w-full w-full text-sm">
+            <table className="min-w-full w-full text-xs">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-4 py-2 text-left font-medium text-gray-500">机器人</th>
-                  <th className="px-4 py-2 text-left font-medium text-gray-500">状态</th>
-                  <th className="px-4 py-2 text-left font-medium text-gray-500">在线时长</th>
-                  <th className="px-4 py-2 text-left font-medium text-gray-500">最后登录</th>
-                  <th className="px-4 py-2 text-left font-medium text-gray-500">状态说明</th>
+                  <th className="px-3 py-2 text-left font-medium text-gray-500">机器人</th>
+                  <th className="px-3 py-2 text-left font-medium text-gray-500">状态</th>
+                  <th className="px-3 py-2 text-left font-medium text-gray-500">在线时长</th>
+                  <th className="px-3 py-2 text-left font-medium text-gray-500">最后登录</th>
+                  <th className="px-3 py-2 text-left font-medium text-gray-500">状态说明</th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+              <tbody className="bg-white divide-y divide-gray-100">
                 {botStatuses.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="px-4 py-4 text-center text-gray-500">
-                      暂无机器人
-                    </td>
+                    <td colSpan={5} className="px-3 py-4 text-center text-gray-400">暂无机器人</td>
                   </tr>
                 ) : (
                   botStatuses.map((bot) => (
-                    <tr key={bot.id} className="hover:bg-gray-50">
-                      <td className="px-4 py-2 whitespace-nowrap">
+                    <tr key={bot.id} className="hover:bg-blue-50 transition">
+                      <td className="px-3 py-2 whitespace-nowrap">
                         <div className="flex items-center">
-                          <div className={`flex-shrink-0 h-8 w-8 rounded-full bg-gray-100 flex items-center justify-center ${bot.status === 'online' ? 'text-green-500' : 'text-red-500'}`}>
-                            {bot.status === 'online' ? <Wifi size={16} /> : <WifiOff size={16} />}
+                          <div className={`flex-shrink-0 h-7 w-7 rounded-full bg-blue-100 flex items-center justify-center ${bot.status === 'online' ? 'text-green-500' : 'text-red-500'}`}>
+                            {bot.status === 'online' ? <Wifi size={14} /> : <WifiOff size={14} />}
                           </div>
-                          <div className="ml-3">
-                            <div className="text-sm font-medium text-gray-900">{bot.name}</div>
+                          <div className="ml-2">
+                            <div className="font-bold text-gray-900 text-sm">{bot.name}</div>
                           </div>
                         </div>
                       </td>
-                      <td className="px-4 py-2 whitespace-nowrap">
+                      <td className="px-3 py-2 whitespace-nowrap">
                         {bot.status === 'online' ? (
-                          <span className="px-2 py-1 text-xs rounded-full bg-green-100 text-green-800">在线</span>
+                          <span className="px-2 py-0.5 text-xs rounded bg-green-100 text-green-700 font-semibold">在线</span>
                         ) : (
-                          <span className="px-2 py-1 text-xs rounded-full bg-red-100 text-red-800">离线</span>
+                          <span className="px-2 py-0.5 text-xs rounded bg-red-100 text-red-700 font-semibold">离线</span>
                         )}
                       </td>
-                      <td className="px-4 py-2 whitespace-nowrap text-gray-500">
-                        {bot.onlineTime || '-'}
-                      </td>
-                      <td className="px-4 py-2 whitespace-nowrap text-gray-500">
-                        {bot.loginTime || '-'}
-                      </td>
-                      <td className="px-4 py-2 max-w-xs truncate text-gray-500" title={bot.statusText}>
-                        {bot.statusText}
-                      </td>
+                      <td className="px-3 py-2 whitespace-nowrap text-gray-500">{bot.onlineTime || '-'}</td>
+                      <td className="px-3 py-2 whitespace-nowrap text-gray-500">{bot.loginTime || '-'}</td>
+                      <td className="px-3 py-2 max-w-xs truncate text-gray-500" title={bot.statusText}>{bot.statusText}</td>
                     </tr>
                   ))
                 )}
@@ -222,82 +244,44 @@ const MonitoringPage: React.FC = () => {
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-          <div className="px-6 py-4 bg-gray-50 border-b border-gray-200">
-            <h2 className="font-bold text-gray-800">系统状态</h2>
+        {/* 日志区块美化 */}
+        <div className="bg-[#18181c] rounded-2xl shadow-xl border border-[#23272f] flex flex-col overflow-hidden">
+          <div className="h-1 bg-gradient-to-r from-blue-600 to-purple-500 w-full" />
+          <div className="flex items-center justify-between px-6 py-4 border-b border-[#23272f] bg-[#1f1f23]">
+            <h2 className="font-bold text-xl text-gray-100 tracking-wide flex items-center gap-2">
+              <Activity size={22} className="text-blue-400" /> 运行日志
+            </h2>
+            <button
+              onClick={fetchLogs}
+              className="p-2 bg-gradient-to-r from-blue-600 to-purple-500 text-white hover:scale-110 transition-all rounded-full shadow"
+              title="立即刷新日志"
+            >
+              <RefreshCw size={18} />
+            </button>
           </div>
-          <div className="p-6">
-            <div className="flex items-center justify-between mb-6">
-              <span className="text-lg font-medium">总体状态</span>
-              <div className={`flex items-center ${
-                systemStatus === 'online' ? 'text-green-500' : 
-                systemStatus === 'partial' ? 'text-yellow-500' : 'text-red-500'
-              }`}>
-                <Activity size={20} className="mr-2" />
-                <span>
-                  {systemStatus === 'online' ? '系统正常' : 
-                   systemStatus === 'partial' ? '部分服务异常' : '系统离线'}
-                </span>
-              </div>
-            </div>
-
-            <div className="space-y-4">
-              <div className="flex justify-between items-center">
-                <span className="text-gray-600">WebSocket服务</span>
-                <span className={`flex items-center ${
-                  systemStatus === 'online' ? 'text-green-500' : 
-                  systemStatus === 'partial' ? 'text-yellow-500' : 'text-red-500'
-                }`}>
-                  <div className={`w-2 h-2 rounded-full mr-2 ${
-                    systemStatus === 'online' ? 'bg-green-500' : 
-                    systemStatus === 'partial' ? 'bg-yellow-500' : 'bg-red-500'
-                  }`}></div>
-                  {systemStatus === 'online' ? '正常' : 
-                   systemStatus === 'partial' ? '不稳定' : '离线'}
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* 日志区块 */}
-      <div className="bg-white rounded-lg border border-gray-200 mb-6">
-        <div className="flex items-center justify-between px-6 py-4 bg-gray-50 border-b border-gray-200">
-          <h2 className="font-bold text-gray-800">运行日志</h2>
-          <button
-            onClick={fetchLogs}
-            className="p-2 text-gray-500 hover:text-gray-700 transition-colors text-xs border border-gray-200 rounded"
-            title="立即刷新日志"
+          <div
+            id="log-scroll-box"
+            className="p-6 overflow-y-auto font-mono text-sm text-gray-100 hide-scrollbar"
+            style={{ minHeight: 400, maxHeight: '60vh', background: '#18181c' }}
           >
-            <RefreshCw size={16} />
-          </button>
-        </div>
-        <div className="p-4 overflow-x-auto">
-          <table className="min-w-full text-sm border">
-            <thead>
-              {/* <tr>
-                <th className="px-2 py-1 border-b bg-gray-50 text-left">时间</th>
-                <th className="px-2 py-1 border-b bg-gray-50 text-left">类型</th>
-                <th className="px-2 py-1 border-b bg-gray-50 text-left">内容</th>
-              </tr> */}
-            </thead>
-            <tbody>
-              {logs.length === 0 ? (
-                <tr>
-                  <td colSpan={3} className="text-center text-gray-400 py-4">暂无日志</td>
-                </tr>
-              ) : (
-                logs.slice(0, 100).map((log, idx) => (
-                  <tr key={idx} className={log.type === 'error' ? 'bg-red-50' : ''}>
-                    <td className="px-2 py-1 border-b whitespace-nowrap text-xs text-gray-500">{log.timestamp.replace('T', ' ').replace('Z', '')}</td>
-                    <td className={`px-2 py-1 border-b whitespace-nowrap font-bold ${log.type === 'error' ? 'text-red-600' : 'text-blue-600'}`}>{log.type === 'info' ? '信息' : '错误'}</td>
-                    <td className="px-2 py-1 border-b" style={{wordBreak: 'break-all', whiteSpace: 'pre-wrap'}}>{log.message}</td>
+            <table className="min-w-full text-sm border-0">
+              <tbody>
+                {logs.length === 0 ? (
+                  <tr>
+                    <td colSpan={3} className="text-center text-gray-500 py-6">暂无日志</td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+                ) : (
+                  logs.slice(0, 200).map((log, idx) => (
+                    <tr key={idx} className={log.type === 'error' ? 'bg-[#2d1a1a] hover:bg-[#3a2323]' : 'hover:bg-[#23272f]'}>
+                      <td className="px-2 py-1 border-b border-[#23272f] whitespace-nowrap text-xs text-gray-400 align-top min-w-[120px]">{log.timestamp.replace('T', ' ').replace('Z', '')}</td>
+                      <td className={`px-2 py-1 border-b border-[#23272f] whitespace-nowrap font-bold align-top min-w-[60px] ${log.type === 'error' ? 'text-red-400' : 'text-blue-400'}`}>{log.type === 'info' ? '信息' : '错误'}</td>
+                      <td className="px-2 py-1 border-b border-[#23272f] align-top" style={{wordBreak: 'break-all', whiteSpace: 'pre-wrap'}}>{log.message}</td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     </div>
@@ -305,3 +289,16 @@ const MonitoringPage: React.FC = () => {
 };
 
 export default MonitoringPage;
+
+/* 隐藏滚动条样式 */
+<style>
+{`
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.hide-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+`}
+</style>

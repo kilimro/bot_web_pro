@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Search, Filter, RefreshCw, AlertTriangle, Import, Check } from 'lucide-react';
+import { Plus, Search, Filter, RefreshCw, AlertTriangle, Import, Check, Bot as BotIcon } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import BotCard from '../components/Bot/BotCard';
 import QrCodeLogin from '../components/Bot/QrCodeLogin';
 import ImportBotForm from '../components/Bot/ImportBotForm';
 import { Bot, LoginStatusResponse } from '../types';
-import { getBotList, generateAuthKey, createBot, deleteBot } from '../services/api';
+import { getBotList, generateAuthKey, createBot, deleteBot, logoutBot, checkLoginStatus, getLoginStatus } from '../services/api';
 import { supabase } from '../lib/supabase';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
@@ -13,35 +13,63 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 interface QrCodeLoginModalProps {
   onClose: () => void;
   onSuccess: () => void;
+  authKey?: string;
 }
 
-const QrCodeLoginModal: React.FC<QrCodeLoginModalProps> = ({ onClose, onSuccess }) => {
+const QrCodeLoginModal: React.FC<QrCodeLoginModalProps> = ({ onClose, onSuccess, authKey }) => {
   const [qrCodeUrl, setQrCodeUrl] = useState<string>('');
-  const [authKey, setAuthKey] = useState<string>('');
+  const [innerAuthKey, setInnerAuthKey] = useState<string>(authKey || '');
   const [status, setStatus] = useState<string>('正在生成授权码...');
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isScanning, setIsScanning] = useState(false);
+  const [polling, setPolling] = useState(false);
+  const [pollingTimeout, setPollingTimeout] = useState<NodeJS.Timeout | null>(null);
+  const [pollingCount, setPollingCount] = useState(0);
 
   useEffect(() => {
-    initLogin();
+    if (authKey) {
+      setInnerAuthKey(authKey);
+      initQrCode(authKey);
+    } else {
+      initLogin();
+    }
   }, []);
 
-  const initLogin = async () => {
+  useEffect(() => {
+    if (isScanning) {
+      setPolling(true);
+      setPollingCount(0);
+      const timer = setInterval(async () => {
+        setPollingCount(count => count + 1);
+        try {
+          const checkScanRes = await fetch(`${API_BASE_URL}/login/CheckLoginStatus?key=` + innerAuthKey);
+          const checkScanData = await checkScanRes.json();
+          console.log('[自动轮询] 扫码API返回:', checkScanData);
+          if (checkScanData.Code === 200 && Number(checkScanData.Data.state) === 2) {
+            clearInterval(timer);
+            setPolling(false);
+            await handleConfirmScan(true);
+          } else if (pollingCount >= 30) {
+            clearInterval(timer);
+            setPolling(false);
+            setError('扫码超时，请刷新二维码重试');
+          }
+        } catch (e) {
+          // 忽略单次异常
+        }
+      }, 2000);
+      setPollingTimeout(timer);
+      return () => clearInterval(timer);
+    }
+  }, [isScanning, innerAuthKey]);
+
+  const initQrCode = async (key: string) => {
     try {
       setIsLoading(true);
       setError(null);
-      // 1. 生成授权码
-      const keyResponse = await generateAuthKey();
-      if (keyResponse.Code !== 200) {
-        throw new Error(keyResponse.Text || '生成授权码失败');
-      }
-      const newAuthKey = keyResponse.Data[0];
-      setAuthKey(newAuthKey);
       setStatus('正在获取登录二维码...');
-
-      // 2. 获取登录二维码
-      const qrResponse = await fetch(`${API_BASE_URL}/login/GetLoginQrCodeNewX?key=` + newAuthKey, {
+      const qrResponse = await fetch(`${API_BASE_URL}/login/GetLoginQrCodeNewX?key=` + key, {
         method: 'POST',
         headers: {
           'accept': 'application/json',
@@ -66,43 +94,75 @@ const QrCodeLoginModal: React.FC<QrCodeLoginModalProps> = ({ onClose, onSuccess 
     }
   };
 
-  const handleConfirmScan = async () => {
+  const initLogin = async () => {
     try {
       setIsLoading(true);
       setError(null);
+      const keyResponse = await generateAuthKey();
+      if (keyResponse.Code !== 200) {
+        throw new Error(keyResponse.Text || '生成授权码失败');
+      }
+      const newAuthKey = keyResponse.Data[0];
+      setInnerAuthKey(newAuthKey);
+      await initQrCode(newAuthKey);
+    } catch (error) {
+      setError(error instanceof Error ? error.message : '初始化登录失败');
+      setIsLoading(false);
+    }
+  };
+
+  const handleConfirmScan = async (fromPolling = false) => {
+    try {
+      if (!fromPolling) {
+        console.log('点击了已扫码确认，authKey:', innerAuthKey);
+      }
+      setIsLoading(true);
+      setError(null);
       
-      // 3. 检查扫码状态
-      const response = await fetch(`${API_BASE_URL}/login/CheckLoginStatus?key=` + authKey);
-      const data = await response.json();
+      const checkScanRes = await fetch(`${API_BASE_URL}/login/CheckLoginStatus?key=` + innerAuthKey);
+      const checkScanData = await checkScanRes.json();
+      console.log('扫码API返回:', checkScanData);
       
-      if (data.Code !== 200 || data.Data.state !== 2) {
-        throw new Error('请先完成扫码登录');
+      if (checkScanData.Code !== 200 || Number(checkScanData.Data.state) !== 2) {
+        if (!fromPolling) {
+          console.warn('扫码状态不通过，Code:', checkScanData.Code, 'state:', checkScanData.Data.state);
+          throw new Error('请先完成扫码登录');
+        } else {
+          setIsLoading(false);
+          return;
+        }
       }
 
-      // 4. 检查在线状态
-      const statusResponse = await fetch(`${API_BASE_URL}/login/GetLoginStatus?key=` + authKey);
-      const statusData = await response.json();
-      if (statusData.Code !== 200 || statusData.Data.loginState !== 1) {
+      const loginStatusRes = await fetch(`${API_BASE_URL}/login/GetLoginStatus?key=` + innerAuthKey);
+      const loginStatusData = await loginStatusRes.json();
+      console.log('在线状态API返回:', loginStatusData);
+      if (
+        loginStatusData.Code !== 200 ||
+        !loginStatusData.Data ||
+        loginStatusData.Data.loginState !== 1
+      ) {
+        console.warn('机器人未在线，Code:', loginStatusData.Code, 'loginState:', loginStatusData.Data?.loginState);
         throw new Error('机器人未在线');
       }
 
-      // 5. 获取机器人资料
-      const profileResponse = await fetch(`${API_BASE_URL}/user/GetProfile?key=` + authKey);
+      const profileResponse = await fetch(`${API_BASE_URL}/user/GetProfile?key=` + innerAuthKey);
       const profileData = await profileResponse.json();
+      console.log('机器人资料API返回:', profileData);
       if (profileData.Code !== 200) {
         throw new Error('获取机器人资料失败');
       }
 
-      // 保存机器人信息到数据库
+      const { data: { session } } = await supabase.auth.getSession();
       const { data: bot, error: createError } = await supabase
         .from('bots')
         .insert([{
-          auth_key: authKey,
-          wxid: data.Data.wxid,
+          auth_key: innerAuthKey,
+          wxid: checkScanData.Data.wxid,
           nickname: profileData.Data.userInfo.nickName.str,
           avatar_url: profileData.Data.userInfoExt.bigHeadImgUrl,
           status: 'online',
-          created_at: new Date().toISOString()
+          created_at: new Date().toISOString(),
+          user_id: session?.user?.id || null
         }])
         .select()
         .single();
@@ -111,6 +171,8 @@ const QrCodeLoginModal: React.FC<QrCodeLoginModalProps> = ({ onClose, onSuccess 
         throw new Error('保存机器人信息失败: ' + createError.message);
       }
 
+      if (pollingTimeout) clearInterval(pollingTimeout);
+      setPolling(false);
       onSuccess();
       onClose();
     } catch (error) {
@@ -143,7 +205,9 @@ const QrCodeLoginModal: React.FC<QrCodeLoginModalProps> = ({ onClose, onSuccess 
         ) : isLoading ? (
           <div className="text-center py-8">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-            <p className="text-gray-600">{status}</p>
+            <p className="text-gray-600">
+              请用微信扫码并在手机上确认登录，正在检测扫码状态...
+            </p>
           </div>
         ) : (
           <div className="text-center py-8">
@@ -151,7 +215,7 @@ const QrCodeLoginModal: React.FC<QrCodeLoginModalProps> = ({ onClose, onSuccess 
             <p className="text-gray-600 mb-4">{status}</p>
             {isScanning && (
               <button
-                onClick={handleConfirmScan}
+                onClick={() => handleConfirmScan(false)}
                 className="flex items-center justify-center px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 mx-auto"
               >
                 <Check className="mr-2" size={18} />
@@ -172,6 +236,7 @@ const BotsPage: React.FC = () => {
   const [bots, setBots] = useState<Bot[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [loginBotKey, setLoginBotKey] = useState<string | null>(null);
 
   useEffect(() => {
     fetchBots();
@@ -192,41 +257,93 @@ const BotsPage: React.FC = () => {
   };
 
   const handleLogin = async (botId: string) => {
-    // TODO: 实现登录逻辑
-    console.log('Login bot:', botId);
+    const bot = bots.find(b => b.id === botId);
+    if (bot && bot.auth_key) {
+      setLoginBotKey(bot.auth_key);
+      setShowCreateModal(true);
+    }
   };
 
   const handleDelete = async (botId: string) => {
     try {
       await deleteBot(botId);
-      await fetchBots(); // 重新加载机器人列表
+      await fetchBots();
     } catch (error) {
       console.error('删除机器人失败:', error);
       setError('删除机器人失败');
     }
   };
 
+  const handleLogout = async (botId: string) => {
+    try {
+      const bot = bots.find(b => b.id === botId);
+      if (!bot) throw new Error('未找到机器人');
+      if (!bot.auth_key) throw new Error('机器人缺少授权密钥');
+      const res = await logoutBot(bot.auth_key);
+      if (res.Code !== 200) throw new Error(res.Text || '下线失败');
+      await supabase
+        .from('bots')
+        .update({
+          status: 'offline',
+          last_active_at: new Date().toISOString()
+        })
+        .eq('id', botId);
+      await fetchBots();
+    } catch (error) {
+      setError(error instanceof Error ? error.message : '下线失败');
+    }
+  };
+
+  const handleRefresh = async (botId: string) => {
+    try {
+      const bot = bots.find(b => b.id === botId);
+      if (!bot || !bot.auth_key) throw new Error('未找到机器人或缺少授权密钥');
+      const statusRes = await getLoginStatus(bot.auth_key);
+      let newStatus = 'offline';
+      const data = statusRes.Data;
+      const isOnline = statusRes.Code === 200 && data && data.loginState === 1;
+      if (isOnline) {
+        newStatus = 'online';
+      }
+      await supabase
+        .from('bots')
+        .update({
+          status: newStatus,
+          last_active_at: new Date().toISOString()
+        })
+        .eq('id', botId);
+      await fetchBots();
+    } catch (error) {
+      setError(error instanceof Error ? error.message : '刷新状态失败');
+    }
+  };
+
   return (
     <div>
-      <div className="flex justify-between items-center mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-800 mb-2">机器人管理</h1>
-          <p className="text-gray-600">管理您的所有bot机器人</p>
+      <div className="mb-8 flex flex-col md:flex-row md:justify-between md:items-center gap-4">
+        <div className="flex items-center gap-3">
+          <div className="h-12 w-2 rounded bg-gradient-to-b from-blue-500 to-purple-400 mr-2" />
+          <div className="flex items-center gap-3">
+            <div className="bg-blue-100 text-blue-500 rounded-full p-3 shadow-sm">
+              <BotIcon size={24} />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold text-gray-800 tracking-tight">机器人管理</h1>
+              <p className="text-gray-500 mt-1">管理您的所有bot机器人</p>
+            </div>
+          </div>
         </div>
         <div className="flex space-x-4">
           <button
             onClick={() => setShowImportForm(true)}
-            className="flex items-center px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
+            className="px-5 py-2 bg-gradient-to-r from-green-500 to-blue-400 text-white rounded-xl font-bold shadow hover:scale-105 hover:shadow-xl transition-all text-base flex items-center gap-2"
           >
-            <Import size={18} className="mr-2" />
             导入机器人
           </button>
           <button
             onClick={() => setShowCreateModal(true)}
             disabled={isCreatingBot}
-            className={`flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors ${
-              isCreatingBot ? 'opacity-70 cursor-not-allowed' : ''
-            }`}
+            className={`px-5 py-2 bg-gradient-to-r from-blue-600 to-purple-500 text-white rounded-xl font-bold shadow hover:scale-105 hover:shadow-xl transition-all text-base flex items-center gap-2 ${isCreatingBot ? 'opacity-70 cursor-not-allowed' : ''}`}
           >
             {isCreatingBot ? (
               <>
@@ -234,10 +351,7 @@ const BotsPage: React.FC = () => {
                 创建中...
               </>
             ) : (
-              <>
-                <Plus size={18} className="mr-2" />
-                新建机器人
-              </>
+              <>新建机器人</>
             )}
           </button>
         </div>
@@ -284,6 +398,8 @@ const BotsPage: React.FC = () => {
               bot={bot} 
               onDelete={handleDelete}
               onLogin={handleLogin}
+              onLogout={handleLogout}
+              onRefresh={handleRefresh}
             />
           ))}
         </div>
@@ -311,8 +427,12 @@ const BotsPage: React.FC = () => {
 
       {showCreateModal && (
         <QrCodeLoginModal
-          onClose={() => setShowCreateModal(false)}
+          onClose={() => {
+            setShowCreateModal(false);
+            setLoginBotKey(null);
+          }}
           onSuccess={fetchBots}
+          authKey={loginBotKey || undefined}
         />
       )}
     </div>

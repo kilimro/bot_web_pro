@@ -1,5 +1,6 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
+import { Tooltip } from 'antd';
 import { 
   Home, 
   Bot, 
@@ -10,11 +11,15 @@ import {
   Puzzle,
   Brain,
   ChevronDown,
-  ChevronRight
+  ChevronRight,
+  ChevronLeft,
+  Github,
+  Dot
 } from 'lucide-react';
 
 interface SidebarProps {
   isOpen: boolean;
+  setIsOpen: (open: boolean) => void;
 }
 
 interface NavItem {
@@ -27,7 +32,7 @@ interface NavItem {
   }[];
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ isOpen }) => {
+const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen }) => {
   const [expandedItems, setExpandedItems] = React.useState<string[]>([]);
 
   const toggleExpand = (path: string) => {
@@ -39,7 +44,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen }) => {
   };
 
   const navItems: NavItem[] = [
-    { path: '/dashboard', icon: <Home size={20} />, text: '控制面板' },
+    { path: '/dashboard', icon: <Home size={20} />, text: '工作台' },
     { 
       path: '/bots', 
       icon: <Bot size={20} />, 
@@ -64,24 +69,26 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen }) => {
     return (
       <li key={item.path} className="mb-1">
         <div className="flex flex-col">
-          <div 
+          <div
             className={`flex items-center p-3 ${isOpen ? 'pl-4' : 'md:justify-center'} rounded-lg 
               text-gray-300 hover:bg-gray-800 transition-colors cursor-pointer`}
             onClick={() => hasChildren ? toggleExpand(item.path) : null}
           >
-            <NavLink
-              to={item.path}
-              className={({ isActive }) => 
-                `flex items-center flex-grow ${
-                  isActive ? 'text-blue-400' : 'text-gray-300'
-                }`
-              }
-            >
-              <span className="text-blue-400">{item.icon}</span>
-              <span className={`ml-3 ${!isOpen && 'md:hidden'}`}>
-                {item.text}
-              </span>
-            </NavLink>
+            <Tooltip title={!isOpen ? item.text : undefined} placement="right">
+              <NavLink
+                to={item.path}
+                className={({ isActive }) =>
+                  `flex items-center flex-grow ${
+                    isActive ? 'text-blue-400' : 'text-gray-300'
+                  }`
+                }
+              >
+                <span className="text-blue-400">{item.icon}</span>
+                <span className={`ml-3 ${!isOpen && 'md:hidden'}`}>
+                  {item.text}
+                </span>
+              </NavLink>
+            </Tooltip>
             {hasChildren && isOpen && (
               <span className="ml-auto">
                 {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
@@ -92,17 +99,21 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen }) => {
           {hasChildren && isExpanded && isOpen && item.children && (
             <div className="ml-8 mt-1">
               {item.children.map(child => (
-                <NavLink
-                  key={child.path}
-                  to={child.path}
-                  className={({ isActive }) => 
-                    `flex items-center p-2 rounded-lg text-sm
-                    ${isActive ? 'text-blue-400 bg-gray-800' : 'text-gray-400 hover:bg-gray-800'} 
-                    transition-colors`
-                  }
-                >
-                  {child.text}
-                </NavLink>
+                <Tooltip title={!isOpen ? child.text : undefined} placement="right" key={child.path}>
+                  <NavLink
+                    to={child.path}
+                    className={({ isActive }) => 
+                      `flex items-center p-2 rounded-lg text-sm
+                      ${isActive ? 'text-blue-400 bg-gray-800' : 'text-gray-400 hover:bg-gray-800'} 
+                      transition-colors`
+                    }
+                  >
+                    <span className="mr-2 flex items-center">
+                      <Dot size={18} className="text-blue-400" />
+                    </span>
+                    <span className={`${!isOpen && 'md:hidden'}`}>{child.text}</span>
+                  </NavLink>
+                </Tooltip>
               ))}
             </div>
           )}
@@ -112,15 +123,40 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen }) => {
   };
 
   return (
-    <aside className={`bg-gray-900 text-white h-screen fixed top-0 left-0 pt-16 transition-all duration-300 z-10 ${
-      isOpen ? 'w-64' : 'w-0 md:w-16'
-    }`}>
-      <div className="py-4 overflow-y-auto h-full">
-        <nav className={`${!isOpen && 'md:flex md:flex-col md:items-center'}`}>
-          <ul>
-            {navItems.map(renderNavItem)}
-          </ul>
-        </nav>
+    <aside className={`bg-gray-900 text-white h-screen fixed top-0 left-0 pt-16 transition-all duration-300 z-10 flex flex-col justify-between
+      ${isOpen ? 'w-64' : 'w-0 md:w-16'}`}
+    >
+      <div className="flex-1 flex flex-col">
+        <div className="py-4 overflow-y-auto h-full">
+          <nav className={`${!isOpen && 'md:flex md:flex-col md:items-center'}`}>
+            <ul>
+              {navItems.map(renderNavItem)}
+            </ul>
+          </nav>
+        </div>
+      </div>
+      {/* 底部文案区 */}
+      <div className="px-2 pb-4 text-xs text-gray-400 flex flex-col items-center">
+        {/* 缩放按钮放在底部文案区最上方 */}
+        <button
+          className="bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-full p-1 mb-2 transition-all"
+          onClick={() => setIsOpen(!isOpen)}
+          title={isOpen ? '收起导航栏' : '展开导航栏'}
+        >
+          {isOpen ? <ChevronLeft size={20} /> : <ChevronRight size={20} />}
+        </button>
+        <a
+          href="https://github.com/kilimro/bot_web"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-1 hover:text-blue-400"
+        >
+          <Github size={isOpen ? 18 : 20} />
+          {isOpen && <span>bot_web 开源地址</span>}
+        </a>
+        <div className="mt-1 text-[11px] text-gray-500 text-center">
+          {isOpen ? '© 2024 bot_web | MIT License' : '©'}
+        </div>
       </div>
     </aside>
   );

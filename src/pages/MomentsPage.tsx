@@ -5,6 +5,9 @@ import { supabase } from '../lib/supabase';
 import { sendFriendCircle, uploadFriendCircleImage, getAIConfigs, saveAIConfig, deleteAIConfig, generateText, generateImage, AIConfig } from '../services/api';
 import dayjs from 'dayjs';
 import type { UploadFile } from 'antd/es/upload/interface';
+import { Bot } from '../types';
+import { useAuth } from '../context/AuthContext';
+import { Bot as BotIcon } from 'lucide-react';
 
 interface Moment {
   id: string;
@@ -40,11 +43,33 @@ const MomentsPage: React.FC = () => {
   const [configForm] = Form.useForm();
   const [generatingImage, setGeneratingImage] = useState(false);
   const [aiPrompt, setAiPrompt] = useState<string>('');
+  const [bots, setBots] = useState<Bot[]>([]);
+  const [selectedBotId, setSelectedBotId] = useState<string | undefined>();
+  const { user } = useAuth();
+
+  // 新增：只保留在线机器人
+  const onlineBots = bots.filter(b => b.status === 'online');
+  const selectedBot = onlineBots.find(b => b.id === selectedBotId);
 
   useEffect(() => {
     loadMoments();
     loadAIConfig();
-  }, []);
+    // 查询所有机器人
+    const fetchBots = async () => {
+      if (!user?.id) return;
+      const { data, error } = await supabase.from('bots').select('*').eq('user_id', user.id).order('created_at', { ascending: false });
+      if (error) {
+        message.error('加载机器人列表失败');
+        return;
+      }
+      setBots(data || []);
+      // 默认选中第一个在线机器人
+      const online = (data || []).filter(b => b.status === 'online');
+      if (online.length > 0) setSelectedBotId(online[0].id);
+      else setSelectedBotId(undefined);
+    };
+    fetchBots();
+  }, [user?.id]);
 
   const loadMoments = async () => {
     try {
@@ -188,18 +213,13 @@ const MomentsPage: React.FC = () => {
       const imageData = await generateImage(aiConfig, aiPrompt);
       
       // 获取当前用户的在线机器人
-      const { data: bots, error: botsError } = await supabase
-        .from('bots')
-        .select('*')
-        .eq('status', 'online')
-        .single();
-
-      if (botsError || !bots) {
-        throw new Error('未找到在线的机器人');
+      if (!selectedBot || selectedBot.status !== 'online') {
+        message.error('请先让机器人上线');
+        return;
       }
 
       // 上传图片到朋友圈
-      const response = await uploadFriendCircleImage(bots.auth_key, imageData);
+      const response = await uploadFriendCircleImage(selectedBot.auth_key, imageData);
       
       if (response.Code === 200 && response.Data?.[0]?.resp) {
         const imageData = response.Data[0].resp;
@@ -252,18 +272,13 @@ const MomentsPage: React.FC = () => {
         const base64Data = reader.result as string;
         
         // 获取当前用户的在线机器人
-        const { data: bots, error: botsError } = await supabase
-          .from('bots')
-          .select('*')
-          .eq('status', 'online')
-          .single();
-
-        if (botsError || !bots) {
-          throw new Error('未找到在线的机器人');
+        if (!selectedBot || selectedBot.status !== 'online') {
+          message.error('请先让机器人上线');
+          return;
         }
 
         // 上传图片
-        const response = await uploadFriendCircleImage(bots.auth_key, base64Data);
+        const response = await uploadFriendCircleImage(selectedBot.auth_key, base64Data);
         
         if (response.Code === 200) {
           const imageData = response.Data[0];
@@ -297,19 +312,14 @@ const MomentsPage: React.FC = () => {
       const { content } = values;
       
       // 获取当前用户的在线机器人
-      const { data: bots, error: botsError } = await supabase
-        .from('bots')
-        .select('*')
-        .eq('status', 'online')
-        .single();
-
-      if (botsError || !bots) {
-        throw new Error('未找到在线的机器人');
+      if (!selectedBot || selectedBot.status !== 'online') {
+        message.error('请先让机器人上线');
+        return;
       }
 
       if (postType === 'text') {
         // 发送纯文本朋友圈
-        const response = await sendFriendCircle(bots.auth_key, content);
+        const response = await sendFriendCircle(selectedBot.auth_key, content);
         
         if (response.Code === 200) {
           // 保存到数据库
@@ -320,8 +330,8 @@ const MomentsPage: React.FC = () => {
               type: 'text',
               status: 'published',
               publish_time: new Date().toISOString(),
-              user_id: bots.user_id,
-              bot_id: bots.id
+              user_id: selectedBot.user_id,
+              bot_id: selectedBot.id
             }]);
 
           if (dbError) throw dbError;
@@ -379,7 +389,7 @@ const MomentsPage: React.FC = () => {
           Private: 0
         }));
 
-        const response = await fetch(`${API_BASE_URL}/sns/SendFriendCircle?key=${bots.auth_key}`, {
+        const response = await fetch(`${API_BASE_URL}/sns/SendFriendCircle?key=${selectedBot.auth_key}`, {
           method: 'POST',
           headers: {
             'accept': 'application/json',
@@ -405,8 +415,8 @@ const MomentsPage: React.FC = () => {
               status: 'published',
               publish_time: new Date().toISOString(),
               image_urls: imageUrls,
-              user_id: bots.user_id,
-              bot_id: bots.id
+              user_id: selectedBot.user_id,
+              bot_id: selectedBot.id
             }]);
 
           if (dbError) throw dbError;
@@ -504,7 +514,31 @@ const MomentsPage: React.FC = () => {
   return (
     <div>
       <Card
-        title="朋友圈管理"
+        className="rounded-2xl shadow-xl border-l-4 border-blue-400"
+        style={{ marginBottom: 32 }}
+        title={
+          <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+            <div className="h-10 w-2 rounded bg-gradient-to-b from-blue-500 to-purple-400 mr-2" />
+            <div className="flex items-center gap-3">
+              <div className="bg-blue-100 text-blue-500 rounded-full p-3 shadow-sm">
+                <BotIcon size={10} />
+              </div>
+              <span className="text-2xl font-bold text-gray-800 tracking-tight">朋友圈管理</span>
+            </div>
+            <Select
+              value={selectedBotId}
+              onChange={setSelectedBotId}
+              style={{ width: 220, marginLeft: 24 }}
+              placeholder="请选择机器人"
+            >
+              {onlineBots.map(bot => (
+                <Select.Option key={bot.id} value={bot.id}>
+                  {(bot.nickname || bot.wxid || bot.id.slice(0, 8)) + `（${bot.status === 'online' ? '在线' : '离线'}）`}
+                </Select.Option>
+              ))}
+            </Select>
+          </div>
+        }
         extra={
           <Space>
             <Tooltip title="AI配置">
@@ -516,9 +550,17 @@ const MomentsPage: React.FC = () => {
                   }
                   setConfigDrawerVisible(true);
                 }}
+                className="bg-gradient-to-r from-gray-600 to-gray-700 border-0 rounded-xl font-bold shadow hover:scale-105 hover:shadow-xl transition-all px-5 py-2"
+                style={{ fontSize: 16 }}
               />
             </Tooltip>
-            <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>
+            <Button 
+              type="primary" 
+              icon={<PlusOutlined />} 
+              onClick={handleAdd}
+              className="bg-gradient-to-r from-blue-600 to-purple-500 border-0 rounded-xl font-bold shadow hover:scale-105 hover:shadow-xl transition-all px-5 py-2"
+              style={{ fontSize: 16 }}
+            >
               发送朋友圈
             </Button>
           </Space>

@@ -321,6 +321,12 @@ class WebSocketService {
           }
         }
       }
+      if (isGroupMessage && botInfo?.at_reply_enabled === 1) {
+        if (!message.push_content) {
+          if (typeof this.logInfo === 'function') this.logInfo('群聊未被@，跳过AI回复');
+          return;
+        }
+      }
       await Promise.all([
         this.recordMessage(botId, message, fromUser, parsedSender, parsedContent, msgType, content),
         (async () => {
@@ -399,7 +405,7 @@ class WebSocketService {
       return cachedInfo.data;
     }
     try {
-      const { data: bot, error: botError } = await supabase.from('bots').select('user_id').eq('id', botId).single();
+      const { data: bot, error: botError } = await supabase.from('bots').select('user_id, at_reply_enabled, wxid, nickname').eq('id', botId).single();
       if (botError) {
         logError('获取机器人信息失败:', botError);
         return null;
@@ -1194,8 +1200,8 @@ class WebSocketService {
       }
       messages.push({ role: 'user', content: message });
       logInfo(`最终发送给AI的消息数组长度: ${messages.length}`);
-      logInfo(`- 系统提示词: ${fixedSystemPrompt.substring(0, 50)}...`);
-      logInfo(`- 上下文消息: ${context.length} 条`);
+      // logInfo(`- 系统提示词: ${fixedSystemPrompt.substring(0, 50)}...`);
+      // logInfo(`- 上下文消息: ${context.length} 条`);
       logInfo(`- 用户消息: ${message}`);
       const aiResponse = await axios.post(url, {
         model: modelConfig.model,

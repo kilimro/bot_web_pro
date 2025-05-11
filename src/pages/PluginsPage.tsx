@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Search, Edit2, Trash2, AlertTriangle, Play, Save, HelpCircle, Copy } from 'lucide-react';
+import { Plus, Search, Edit2, Trash2, AlertTriangle, Save, HelpCircle, Copy, Puzzle, User, Settings } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
 import { uploadFriendCircleImage } from '../services/api';
@@ -567,25 +567,31 @@ ${sendLine}  } catch (error) {
   );
 
   return (
-    <div>
-      <div className="mb-6 flex justify-between items-center">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-800 mb-2">插件中心</h1>
-          <p className="text-gray-600">管理和编写自定义插件</p>
+    <div className="min-h-screen w-full bg-gradient-to-br from-blue-50 via-white to-purple-50 py-10 px-2 md:px-8 lg:px-24 flex flex-col">
+      <div className="mb-8 flex flex-col md:flex-row md:justify-between md:items-center gap-4">
+        <div className="flex items-center gap-3">
+          <div className="h-12 w-2 rounded bg-gradient-to-b from-blue-500 to-purple-400 mr-2" />
+          <div className="flex items-center gap-3">
+            <div className="bg-blue-100 text-blue-500 rounded-full p-3 shadow-sm">
+              <Settings size={20} />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold text-gray-800 tracking-tight">插件中心</h1>
+              <p className="text-gray-500 mt-1">管理和编写自定义插件</p>
+            </div>
+          </div>
         </div>
         <div className="flex space-x-4">
           <button
             onClick={() => setShowGuide(true)}
-            className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors flex items-center"
+            className="px-4 py-1.5 text-base bg-gradient-to-r from-gray-600 to-gray-700 text-white rounded-xl font-bold shadow hover:scale-105 hover:shadow-xl transition-all"
           >
-            <HelpCircle size={18} className="mr-2" />
             编写指南
           </button>
           <button
             onClick={() => setShowAIGenModal(true)}
-            className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors flex items-center"
+            className="px-4 py-1.5 text-base bg-gradient-to-r from-green-500 to-blue-400 text-white rounded-xl font-bold shadow hover:scale-105 hover:shadow-xl transition-all"
           >
-            <HelpCircle size={18} className="mr-2" />
             AI帮写
           </button>
           <button
@@ -594,24 +600,23 @@ ${sendLine}  } catch (error) {
               resetForm();
               setShowAddModal(true);
             }}
-            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors flex items-center"
+            className="px-4 py-1.5 text-base bg-gradient-to-r from-blue-600 to-purple-500 text-white rounded-xl font-bold shadow hover:scale-105 hover:shadow-xl transition-all"
           >
-            <Plus size={18} className="mr-2" />
             添加插件
           </button>
         </div>
       </div>
 
-      <div className="mb-6">
+      <div className="mb-8">
         <div className="relative">
           <input
             type="text"
             placeholder="搜索插件..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full px-4 py-2 pl-10 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full px-5 py-3 pl-14 border-2 border-blue-100 rounded-xl focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-200 text-lg shadow-sm bg-white"
           />
-          <Search className="absolute left-3 top-2.5 text-gray-400" size={20} />
+          <Search className="absolute left-4 top-3 text-blue-300" size={26} />
         </div>
       </div>
 
@@ -626,14 +631,27 @@ ${sendLine}  } catch (error) {
           <p className="text-gray-600">没有找到匹配的插件</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {filteredPlugins.map(plugin => (
-            <div key={plugin.id} className="bg-white rounded-lg shadow-md p-6">
-              <div className="flex justify-between items-start mb-4">
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-800">{plugin.name}</h3>
-                  <p className="text-sm text-gray-500">{plugin.description}</p>
+            <div
+              key={plugin.id}
+              className="bg-gradient-to-br from-blue-50 via-white to-white rounded-2xl shadow-lg border border-gray-100 group relative overflow-hidden min-h-[210px] p-5 flex flex-col justify-between transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:border-blue-400 hover:z-10 hover:bg-gradient-to-br hover:from-blue-100 hover:via-white hover:to-white"
+              style={{ boxShadow: '0 4px 24px 0 rgba(60,120,240,0.06)' }}
+            >
+              <div className="flex items-center mb-2">
+                <div className="bg-blue-200 text-blue-700 rounded-full p-3 mr-3 shadow-sm group-hover:bg-blue-400 group-hover:text-white transition-colors duration-300">
+                  <Puzzle size={28} />
                 </div>
+                <div className="flex-1 min-w-0">
+                  <h3 className="text-base font-bold text-gray-900 group-hover:text-blue-800 transition-colors duration-300 truncate">{plugin.name}</h3>
+                  <p className="text-xs text-gray-400 mt-0.5 truncate">{new Date(plugin.created_at).toLocaleString()}</p>
+                </div>
+                <span className={`ml-2 px-2 py-0.5 text-xs rounded-full font-medium ${plugin.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-200 text-gray-500'}`}>{plugin.is_active ? '已启用' : '已禁用'}</span>
+              </div>
+              <div className="mb-2 min-h-[36px]">
+                <p className="text-gray-700 text-sm line-clamp-2 break-all">{plugin.description || '暂无描述'}</p>
+              </div>
+              <div className="flex justify-between items-end border-t pt-3 mt-2">
                 <div className="flex space-x-2">
                   <button
                     onClick={() => {
@@ -647,35 +665,28 @@ ${sendLine}  } catch (error) {
                       });
                       setShowAddModal(true);
                     }}
-                    className="p-1.5 text-gray-600 hover:text-blue-600 transition-colors"
+                    className="p-2 rounded-lg hover:bg-blue-200 text-blue-600 hover:text-blue-900 transition-all duration-200 hover:scale-110"
+                    title="编辑"
                   >
-                    <Edit2 size={16} />
+                    <Edit2 size={18} />
                   </button>
                   <button
                     onClick={() => handleDelete(plugin.id)}
-                    className="p-1.5 text-gray-600 hover:text-red-600 transition-colors"
+                    className="p-2 rounded-lg hover:bg-red-200 text-red-500 hover:text-red-700 transition-all duration-200 hover:scale-110"
+                    title="删除"
                   >
-                    <Trash2 size={16} />
+                    <Trash2 size={18} />
                   </button>
                 </div>
+                <div className="flex items-center ml-2">
+                  <span className="bg-blue-100 text-blue-600 rounded-full p-1 mr-2 flex items-center justify-center">
+                    <User size={16} />
+                  </span>
+                  <span className="text-xs text-gray-500">作者：</span>
+                  <span className="text-xs text-gray-700 font-medium ml-1">[管理员]</span>
+                </div>
               </div>
-              <div className="mb-4">
-                <code className="text-sm bg-gray-100 px-2 py-1 rounded">
-                  {plugin.trigger}
-                </code>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className={`text-sm ${plugin.is_active ? 'text-green-600' : 'text-gray-500'}`}>
-                  {plugin.is_active ? '已启用' : '已禁用'}
-                </span>
-                <button
-                  onClick={() => handleTest(plugin)}
-                  className="text-blue-600 hover:text-blue-700 flex items-center text-sm"
-                >
-                  <Play size={14} className="mr-1" />
-                  测试
-                </button>
-              </div>
+              <div className="absolute right-0 top-0 w-2 h-full bg-gradient-to-l from-blue-200 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
             </div>
           ))}
         </div>
@@ -825,86 +836,6 @@ ${sendLine}  } catch (error) {
                 </button>
               </div>
             </form>
-          </div>
-        </div>
-      )}
-
-      {showTestModal && testingPlugin && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full">
-            <div className="px-6 py-4 border-b border-gray-200">
-              <h3 className="text-lg font-medium">测试插件</h3>
-            </div>
-            
-            <div className="p-6">
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  触发命令: <code className="text-blue-600">{testingPlugin.trigger}</code>
-                </label>
-                {testingPlugin.trigger.endsWith('?') && (
-                  <input
-                    type="text"
-                    value={testInput}
-                    onChange={(e) => setTestInput(e.target.value)}
-                    placeholder="输入测试参数"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                )}
-              </div>
-
-              {testResult && (
-                <div className={`mb-4 p-4 rounded-lg ${
-                  testResult.success ? 'bg-green-50' : 'bg-red-50'
-                }`}>
-                  <div className={`font-medium mb-2 ${
-                    testResult.success ? 'text-green-700' : 'text-red-700'
-                  }`}>
-                    {testResult.message}
-                  </div>
-                  {testResult.error ? (
-                    <pre className="text-red-600 text-sm whitespace-pre-wrap">
-                      {testResult.error}
-                    </pre>
-                  ) : testResult.output && testResult.output.length > 0 ? (
-                    <div className="space-y-2">
-                      {testResult.output.map((msg: string, index: number) => (
-                        <div key={index} className="p-2 bg-white rounded border border-gray-200">
-                          {msg}
-                        </div>
-                      ))}
-                    </div>
-                  ) : null}
-                </div>
-              )}
-
-              <div className="flex justify-end space-x-4">
-                <button
-                  onClick={() => setShowTestModal(false)}
-                  className="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
-                >
-                  关闭
-                </button>
-                <button
-                  onClick={runTest}
-                  disabled={testLoading}
-                  className={`px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors flex items-center ${
-                    testLoading ? 'opacity-50 cursor-not-allowed' : ''
-                  }`}
-                >
-                  {testLoading ? (
-                    <>
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                      测试中...
-                    </>
-                  ) : (
-                    <>
-                      <Play size={16} className="mr-2" />
-                      运行测试
-                    </>
-                  )}
-                </button>
-              </div>
-            </div>
           </div>
         </div>
       )}

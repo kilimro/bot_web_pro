@@ -15,23 +15,20 @@ const MainLayout: React.FC = () => {
     }
   }, [isAuthenticated, navigate]);
 
-  const toggleSidebar = () => {
-    setSidebarOpen(!sidebarOpen);
-  };
-
   return (
     <div className="min-h-screen bg-gray-100">
-      <Header toggleSidebar={toggleSidebar} />
+      <Header />
       
       <div className="flex">
-        <Sidebar isOpen={sidebarOpen} />
+        <Sidebar isOpen={sidebarOpen} setIsOpen={setSidebarOpen} />
         
-        <main className={`transition-all duration-300 flex-grow bg-gray-100 min-h-screen pt-16 ${
+        <main className={`transition-all duration-300 flex-grow bg-gradient-to-br from-blue-50 via-white to-purple-50 min-h-screen pt-16 ${
           sidebarOpen ? 'md:ml-64' : 'md:ml-16'
         }`}>
-          <div className="p-4 md:p-6">
+          <div className="p-4 md:p-6 pb-14">
             <Outlet />
           </div>
+          {/* footer已移除，不再显示全局底部 */}
         </main>
       </div>
     </div>

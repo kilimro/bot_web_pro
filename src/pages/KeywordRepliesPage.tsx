@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Search, Edit2, Trash2, AlertTriangle, Image, MessageSquare, Mic } from 'lucide-react';
+import { Plus, Search, Edit2, Trash2, AlertTriangle, Image, MessageSquare, Mic, Settings } from 'lucide-react';
 import { KeywordReply } from '../types';
 import data from '@emoji-mart/data';
 import Picker from '@emoji-mart/react';
@@ -153,10 +153,18 @@ const KeywordRepliesPage: React.FC = () => {
 
   return (
     <div>
-      <div className="mb-6 flex justify-between items-center">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-800 mb-2">关键词回复</h1>
-          <p className="text-gray-600">管理所有机器人的自动回复规则</p>
+      <div className="mb-8 flex flex-col md:flex-row md:justify-between md:items-center gap-4">
+        <div className="flex items-center gap-3">
+          <div className="h-12 w-2 rounded bg-gradient-to-b from-blue-500 to-purple-400 mr-2" />
+          <div className="flex items-center gap-3">
+            <div className="bg-blue-100 text-blue-500 rounded-full p-3 shadow-sm">
+              <Settings size={20} />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold text-gray-800 tracking-tight">关键词回复</h1>
+              <p className="text-gray-500 mt-1">管理所有机器人的自动回复规则</p>
+            </div>
+          </div>
         </div>
         <button
           onClick={() => {
@@ -172,9 +180,8 @@ const KeywordRepliesPage: React.FC = () => {
             });
             setShowAddModal(true);
           }}
-          className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors flex items-center"
+          className="px-5 py-2 bg-gradient-to-r from-blue-600 to-purple-500 text-white rounded-xl font-bold shadow hover:scale-105 hover:shadow-xl transition-all text-base"
         >
-          <Plus size={18} className="mr-2" />
           添加规则
         </button>
       </div>
@@ -186,17 +193,17 @@ const KeywordRepliesPage: React.FC = () => {
         </div>
       )}
 
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 mb-6">
-        <div className="p-4">
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-200 mb-8">
+        <div className="p-6">
           <div className="relative">
-            <Search size={18} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
             <input
               type="text"
               placeholder="搜索关键词或回复内容..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 pr-4 py-2 w-full border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="pl-14 pr-4 py-3 w-full border-2 border-blue-100 rounded-xl focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-200 text-lg shadow-sm bg-white"
             />
+            <Search size={26} className="absolute left-4 top-3 text-blue-300" />
           </div>
         </div>
       </div>

@@ -121,6 +121,16 @@ export const checkLoginStatus = async (authKey: string): Promise<LoginStatusResp
   }
 };
 
+export const getLoginStatus = async (authKey: string): Promise<LoginStatusResponse> => {
+  try {
+    const response = await api.get(`/login/GetLoginStatus?key=${authKey}`);
+    return response.data;
+  } catch (error) {
+    console.error('获取机器人在线状态失败:', error);
+    throw new Error('获取机器人在线状态失败');
+  }
+};
+
 export const importBot = async (authKey: string): Promise<Bot> => {
   try {
     if (!authKey?.trim()) {
@@ -378,14 +388,19 @@ export const deleteBot = async (botId: string): Promise<void> => {
 
 export const updateStepNumber = async (authKey: string, number: number): Promise<any> => {
   try {
-    const response = await api.post(`/other/UpdateStepNumber?key=${authKey}`, {
-      Number: number
+    const response = await fetch(`${API_BASE_URL}/other/UpdateStepNumber?key=${authKey}`, {
+      method: 'POST',
+      headers: {
+        'accept': 'application/json',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ Number: number })
     });
-    return response.data;
-  } catch (error) {
-    if (axios.isAxiosError(error) && error.code === 'ECONNABORTED') {
-      throw new Error('请求超时，请稍后重试');
+    if (!response.ok) {
+      throw new Error('请求失败');
     }
+    return await response.json();
+  } catch (error) {
     console.error('修改步数失败:', error);
     throw error;
   }
@@ -393,14 +408,19 @@ export const updateStepNumber = async (authKey: string, number: number): Promise
 
 export const setSendPat = async (authKey: string, value: string): Promise<any> => {
   try {
-    const response = await api.post(`/user/SetSendPat?key=${authKey}`, {
-      Value: value
+    const response = await fetch(`${API_BASE_URL}/user/SetSendPat?key=${authKey}`, {
+      method: 'POST',
+      headers: {
+        'accept': 'application/json',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ Value: value })
     });
-    return response.data;
-  } catch (error) {
-    if (axios.isAxiosError(error) && error.code === 'ECONNABORTED') {
-      throw new Error('请求超时，请稍后重试');
+    if (!response.ok) {
+      throw new Error('请求失败');
     }
+    return await response.json();
+  } catch (error) {
     console.error('设置拍一拍失败:', error);
     throw error;
   }
@@ -544,6 +564,7 @@ interface AiModelConfig {
   split_send_interval: number;
   reply_probability: number;
   context_count: number;
+  at_reply_enabled: number;
   user_id: string;
   created_at: string;
   updated_at: string;
@@ -1327,5 +1348,16 @@ export const generateImage = async (config: AIConfig, prompt: string): Promise<s
       throw new Error(`生成图片失败: ${error.message}`);
     }
     throw new Error('生成图片失败: 未知错误');
+  }
+};
+
+// 机器人下线
+export const logoutBot = async (authKey: string): Promise<{ Code: number; Text: string; Data: any }> => {
+  try {
+    const response = await api.get(`/login/LogOut?key=${authKey}`);
+    return response.data;
+  } catch (error) {
+    console.error('机器人下线失败:', error);
+    throw error;
   }
 };

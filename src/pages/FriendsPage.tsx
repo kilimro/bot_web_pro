@@ -6,6 +6,8 @@ import { getFriendList, Friend, delContact, modifyRemark } from '../services/api
 import { useAuth } from '../context/AuthContext';
 import type { ColumnType } from 'antd/es/table';
 import type { FilterConfirmProps } from 'antd/es/table/interface';
+import { Bot as BotIcon } from 'lucide-react';
+import { Bot } from '../types';
 
 interface StoredFriend {
   id: string;
@@ -35,10 +37,25 @@ const FriendsPage: React.FC = () => {
   const [searchText, setSearchText] = useState('');
   const [searchedColumn, setSearchedColumn] = useState('');
   const searchInput = React.useRef<InputRef>(null);
+  const [bots, setBots] = useState<Bot[]>([]);
+  const [selectedBotId, setSelectedBotId] = useState<string | undefined>();
 
   useEffect(() => {
     loadFriends();
-  }, []);
+    // 查询所有机器人
+    const fetchBots = async () => {
+      const { data, error } = await supabase.from('bots').select('*').eq('user_id', user?.id).order('created_at', { ascending: false });
+      if (error) {
+        message.error('加载机器人列表失败');
+        return;
+      }
+      setBots(data || []);
+      if (data && data.length > 0) setSelectedBotId(data[0].id);
+    };
+    if (user?.id) fetchBots();
+  }, [user?.id]);
+
+  const selectedBot = bots.find(b => b.id === selectedBotId);
 
   const loadFriends = async () => {
     try {
@@ -66,24 +83,15 @@ const FriendsPage: React.FC = () => {
       
       console.log('开始同步好友列表，当前用户ID:', user?.id);
       
-      // 获取当前用户的机器人列表
-      const { data: bots, error: botsError } = await supabase
-        .from('bots')
-        .select('id, auth_key')
-        .eq('user_id', user?.id)
-        .eq('status', 'online')
-        .single();
-
-      console.log('查询机器人结果:', { bots, botsError });
-
-      if (botsError || !bots) {
-        throw new Error('未找到在线的机器人');
+      if (!selectedBot || selectedBot.status !== 'online') {
+        message.error('请先让机器人上线');
+        return;
       }
 
-      console.log('找到在线机器人，authKey:', bots.auth_key);
+      console.log('找到在线机器人，authKey:', selectedBot.auth_key);
 
       // 获取最新的好友列表
-      const response = await getFriendList(bots.auth_key);
+      const response = await getFriendList(selectedBot.auth_key);
       
       console.log('获取好友列表响应:', response);
 
@@ -140,20 +148,13 @@ const FriendsPage: React.FC = () => {
 
   const handleDelete = async (id: string, wxId: string) => {
     try {
-      // 获取当前用户的机器人
-      const { data: bots, error: botsError } = await supabase
-        .from('bots')
-        .select('id, auth_key')
-        .eq('user_id', user?.id)
-        .eq('status', 'online')
-        .single();
-
-      if (botsError || !bots) {
-        throw new Error('未找到在线的机器人');
+      if (!selectedBot || selectedBot.status !== 'online') {
+        message.error('请先让机器人上线');
+        return;
       }
 
       // 调用 API 删除好友
-      const response = await delContact(bots.auth_key, wxId);
+      const response = await delContact(selectedBot.auth_key, wxId);
       
       if (response.Code !== 200) {
         throw new Error(response.Text || '删除好友失败');
@@ -181,21 +182,14 @@ const FriendsPage: React.FC = () => {
       
       if (!editingFriend) return;
 
-      // 获取当前用户的机器人
-      const { data: bots, error: botsError } = await supabase
-        .from('bots')
-        .select('id, auth_key')
-        .eq('user_id', user?.id)
-        .eq('status', 'online')
-        .single();
-
-      if (botsError || !bots) {
-        throw new Error('未找到在线的机器人');
+      if (!selectedBot || selectedBot.status !== 'online') {
+        message.error('请先让机器人上线');
+        return;
       }
 
       // 如果修改了备注，先调用 API 修改
       if (values.remark !== editingFriend.remark) {
-        const response = await modifyRemark(bots.auth_key, editingFriend.wx_id, values.remark);
+        const response = await modifyRemark(selectedBot.auth_key, editingFriend.wx_id, values.remark);
         
         if (response.Code !== 200) {
           throw new Error(response.Text || '修改备注失败');
@@ -363,17 +357,37 @@ const FriendsPage: React.FC = () => {
   return (
     <div>
       <Card
+        className="rounded-2xl shadow-xl border-l-4 border-blue-400"
+        style={{ marginBottom: 32 }}
         title={
-          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-            <span>好友管理</span>
-            <div style={{ display: 'flex', gap: '8px', fontSize: '14px', color: '#666' }}>
-              <span>总人数: {friends.length}</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+            <div className="h-10 w-2 rounded bg-gradient-to-b from-blue-500 to-purple-400 mr-2" />
+            <div className="flex items-center gap-3">
+              <div className="bg-blue-100 text-blue-500 rounded-full p-3 shadow-sm">
+                <BotIcon size={10} />
+              </div>
+              <span className="text-2xl font-bold text-gray-800 tracking-tight">好友管理</span>
+            </div>
+            <Select
+              value={selectedBotId}
+              onChange={setSelectedBotId}
+              style={{ width: 220, marginLeft: 24 }}
+              placeholder="请选择机器人"
+            >
+              {bots.map(bot => (
+                <Select.Option key={bot.id} value={bot.id}>
+                  {(bot.nickname || bot.wxid || bot.id.slice(0, 8)) + `（${bot.status === 'online' ? '在线' : '离线'}）`}
+                </Select.Option>
+              ))}
+            </Select>
+            <div className="flex gap-3 text-base text-gray-500 ml-6">
+              <span>总人数: <span className="font-bold text-gray-700">{friends.length}</span></span>
               <span>|</span>
-              <span>男性: {friends.filter(f => f.sex === 1).length}</span>
+              <span>男性: <span className="font-bold text-blue-600">{friends.filter(f => f.sex === 1).length}</span></span>
               <span>|</span>
-              <span>女性: {friends.filter(f => f.sex === 2).length}</span>
+              <span>女性: <span className="font-bold text-pink-500">{friends.filter(f => f.sex === 2).length}</span></span>
               <span>|</span>
-              <span>未知: {friends.filter(f => f.sex !== 1 && f.sex !== 2).length}</span>
+              <span>未知: <span className="font-bold text-gray-400">{friends.filter(f => f.sex !== 1 && f.sex !== 2).length}</span></span>
             </div>
           </div>
         }
@@ -384,6 +398,8 @@ const FriendsPage: React.FC = () => {
               icon={<ReloadOutlined />} 
               onClick={syncFriends}
               loading={loading}
+              className="bg-gradient-to-r from-blue-600 to-purple-500 border-0 rounded-xl font-bold shadow hover:scale-105 hover:shadow-xl transition-all px-5 py-2"
+              style={{ fontSize: 16 }}
             >
               同步好友
             </Button>

@@ -49,21 +49,28 @@ export interface QrCodeResponse {
 export interface LoginStatusResponse {
   Code: number;
   Data: {
-    uuid: string;
-    state: number;
-    wxid: string;
-    wxnewpass: string;
-    head_img_url: string;
-    push_login_url_expired_time: number;
-    nick_name: string;
-    effective_time: number;
-    unknow: number;
-    device: string;
-    ret: number;
-    othersInServerLogin: boolean;
-    tarGetServerIp: string;
-    uuId: string;
-    msg: string;
+    // 兼容 /login/GetLoginStatus 返回
+    loginState?: number;
+    loginTime?: string;
+    expiryTime?: string;
+    onlineTime?: string;
+    loginErrMsg?: string;
+    // 兼容 /login/CheckLoginStatus 返回
+    uuid?: string;
+    state?: number;
+    wxid?: string;
+    wxnewpass?: string;
+    head_img_url?: string;
+    push_login_url_expired_time?: number;
+    nick_name?: string;
+    effective_time?: number;
+    unknow?: number;
+    device?: string;
+    ret?: number;
+    othersInServerLogin?: boolean;
+    tarGetServerIp?: string;
+    uuId?: string;
+    msg?: string;
   };
   Text: string;
 }
