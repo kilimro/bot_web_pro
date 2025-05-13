@@ -226,9 +226,19 @@ const AiModelPage: React.FC = () => {
       <p className="text-gray-500 mb-8 ml-4">配置多个AI模型并设置触发前缀</p>
 
       {isLoading && (
-        <div className="mb-6 p-4 bg-blue-50 text-blue-800 rounded-xl flex items-center shadow animate-fade-in">
-          <AlertTriangle size={22} className="mr-2 text-blue-400" />
-          <span>正在加载配置...</span>
+        <div className="flex flex-col items-center justify-center py-8">
+          <div className="relative flex items-center justify-center h-16 w-16 mb-4">
+            <div className="absolute inset-0 rounded-full border-4 border-t-transparent border-b-transparent border-l-blue-400 border-r-purple-400 animate-spin-slow"></div>
+            <div className="z-10 bg-gradient-to-br from-blue-400 to-purple-400 rounded-full p-3 shadow-lg animate-pulse">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none"><path d="M7.5 2.5v3M16.5 2.5v3M12 7v3M12 17v3M2.5 7.5h3M18.5 7.5h3M2.5 16.5h3M18.5 16.5h3M7 12h3M14 12h3" stroke="#fff" strokeWidth="2" strokeLinecap="round"/></svg>
+            </div>
+            <div className="absolute bottom-0 left-1/2 -translate-x-1/2 flex space-x-1">
+              <span className="w-2 h-2 bg-blue-400 rounded-full animate-bounce [animation-delay:0s]"></span>
+              <span className="w-2 h-2 bg-purple-400 rounded-full animate-bounce [animation-delay:0.2s]"></span>
+              <span className="w-2 h-2 bg-blue-400 rounded-full animate-bounce [animation-delay:0.4s]"></span>
+            </div>
+          </div>
+          <p className="mt-2 text-base text-blue-500 font-semibold tracking-wide animate-pulse">正在加载配置...</p>
         </div>
       )}
       {showSaveSuccess && (

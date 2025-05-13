@@ -5,6 +5,53 @@ import { supabase } from '../lib/supabase';
 
 const API_SERVER_URL = import.meta.env.VITE_API_SERVER_URL;
 
+// 打字机动画hook（更慢+停留+无闪烁+高亮只在打字时）
+function useTypewriterLoop(text: string, highlight: string, speed = 90, pause = 2000) {
+  const [displayed, setDisplayed] = useState('');
+  const [showHighlight, setShowHighlight] = useState(false);
+  const [isTyping, setIsTyping] = useState(true);
+  useEffect(() => {
+    let i = 0;
+    let highlightStart = text.indexOf(highlight);
+    let highlightEnd = highlightStart + highlight.length;
+    let timer: any;
+    let pauseTimer: any;
+    let loop = () => {
+      setDisplayed('');
+      setShowHighlight(false);
+      setIsTyping(true);
+      i = 0;
+      timer = setInterval(() => {
+        if (i < highlightStart) {
+          setDisplayed(text.slice(0, i + 1));
+        } else if (i < highlightEnd) {
+          setDisplayed(text.slice(0, highlightStart));
+          setShowHighlight(true);
+        } else {
+          setDisplayed(text.slice(0, i + 1));
+          setShowHighlight(false);
+        }
+        i++;
+        if (i > text.length) {
+          clearInterval(timer);
+          setDisplayed(text);
+          setShowHighlight(false);
+          setIsTyping(false);
+          pauseTimer = setTimeout(loop, pause);
+        }
+      }, speed);
+    };
+    loop();
+    return () => { clearInterval(timer); clearTimeout(pauseTimer); };
+  }, [text, highlight, speed, pause]);
+  return { displayed, showHighlight, highlight, isTyping };
+}
+
+// astronaut动画样式
+const astronautAnim = {
+  animation: 'floatY 3s ease-in-out infinite',
+};
+
 const Dashboard: React.FC = () => {
   const [stats, setStats] = useState({
     totalBots: 0,
@@ -31,6 +78,10 @@ const Dashboard: React.FC = () => {
   });
   const [logs, setLogs] = useState<any[]>([]);
   const [copySuccess, setCopySuccess] = useState(false);
+
+  const typeText = 'AI机器人工作台，开启智能新体验！';
+  const highlightText = '开启智能新体验！';
+  const { displayed, showHighlight, highlight, isTyping } = useTypewriterLoop(typeText, highlightText, 90, 2000);
 
   useEffect(() => {
     loadDashboardData();
@@ -240,108 +291,128 @@ const Dashboard: React.FC = () => {
   }
 
   return (
-    <div className="pb-4">
-      <div className="mb-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
-          <h1 className="text-xl md:text-2xl font-bold text-gray-900 mb-1 tracking-tight">工作台</h1>
-          <p className="text-sm text-gray-600">欢迎使用机器人管理系统，实时掌控您的业务与系统状态</p>
-        </div>
-      </div>
-      {error && (
-        <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-lg text-sm">{error}</div>
-      )}
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-5 mb-6">
-        {statCards.map((card, index) => {
-          // 主色条和主色大icon
-          const cardStyles = [
-            {
-              bar: 'bg-blue-500',
-              iconBg: 'text-blue-100',
-              iconColor: 'text-blue-600',
-              valueColor: 'text-blue-600',
-            },
-            {
-              bar: 'bg-green-500',
-              iconBg: 'text-green-100',
-              iconColor: 'text-green-600',
-              valueColor: 'text-green-600',
-            },
-            {
-              bar: 'bg-red-500',
-              iconBg: 'text-red-100',
-              iconColor: 'text-red-600',
-              valueColor: 'text-red-600',
-            },
-            {
-              bar: 'bg-indigo-500',
-              iconBg: 'text-indigo-100',
-              iconColor: 'text-indigo-600',
-              valueColor: 'text-indigo-600',
-            },
-            {
-              bar: 'bg-blue-400',
-              iconBg: 'text-blue-100',
-              iconColor: 'text-blue-500',
-              valueColor: 'text-blue-500',
-            },
-          ];
-          const g = cardStyles[index] || cardStyles[0];
-          return (
-            <Link to={card.link} key={index} className="block group">
-              <div className={`relative rounded-2xl bg-white shadow-lg group transition-all duration-200 hover:shadow-2xl hover:-translate-y-1 flex flex-col items-center justify-center min-h-[120px] p-0 overflow-hidden`}
-                style={{ minHeight: '120px', height: '100%' }}>
-                {/* 主色竖条 */}
-                <div className={`absolute left-0 top-0 h-full w-1.5 ${g.bar}`}></div>
-                {/* 大号半透明icon背景 */}
-                <div className={`absolute right-4 top-1/2 -translate-y-1/2 opacity-80 text-7xl pointer-events-none select-none ${g.iconBg}`}>{React.cloneElement(card.icon, { className: `w-16 h-16` })}</div>
-                {/* 主内容 */}
-                <div className="z-10 flex flex-col items-center justify-center py-6">
-                  {card.title !== '我的信息' && (
-                    <span className={`text-4xl font-extrabold ${g.valueColor} mb-1 transition-all duration-200 group-hover:scale-110`}>{card.value}</span>
-                  )}
-                  {card.title === '我的信息' ? (
+    <div className="min-h-screen relative overflow-x-hidden">
+      {/* 顶部欢迎区+数据区 */}
+      <div className="max-w-7xl mx-auto px-4 pt-10 grid grid-cols-1 md:grid-cols-3 gap-8 items-stretch">
+        {/* 欢迎大卡片+插画+渐变背景色 */}
+        <div className="col-span-2 rounded-3xl shadow-lg p-10 flex flex-col justify-between min-h-[280px] relative overflow-hidden bg-gradient-to-br from-[#e8eafd] to-[#e0e7fa]">
+          <div className="mb-10">
+            <div className="relative h-14 mb-3">
+              {/* 占位完整文本，block级，完全一致的样式 */}
+              <div className="invisible h-full flex items-center text-2xl md:text-3xl font-bold">{typeText}</div>
+              {/* 打字内容绝对定位，100%高，flex居中 */}
+              <h1 className="absolute left-0 top-0 w-full h-full flex items-center text-2xl md:text-3xl font-bold text-gray-900">
+                <span className="inline-block mr-2">🤖</span>
+                <span>
+                  {isTyping ? (
                     <>
-                      <p className="text-xs text-gray-500 leading-4 mb-0.5 z-10">
-                        IP：{userInfo.ip || '获取中...'}<br/>浏览器：{userInfo.browser}<br/>系统：{userInfo.os}
-                      </p>
-                      <h3 className="font-semibold text-base text-blue-700 z-10">{card.title}</h3>
+                      {displayed}
+                      {showHighlight && (
+                        <span className="text-indigo-500 font-bold animate-pulse">{highlight}</span>
+                      )}
+                      <span className="border-r-2 border-indigo-400 animate-pulse ml-1" style={{height: '1.2em', display: 'inline-block'}}></span>
                     </>
                   ) : (
-                    <h3 className="font-semibold text-base z-10 text-gray-700">{card.title}</h3>
+                    <>{typeText}</>
                   )}
-                </div>
-              </div>
-            </Link>
-          );
-        })}
-      </div>
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-2">
-        {/* 日志区块（左侧2/3，黑色风格） */}
-        <div className="bg-[#18181c] rounded-lg shadow border border-[#23272f] overflow-hidden xl:col-span-2 flex flex-col">
-          <div className="px-4 py-2 border-b border-[#23272f] bg-[#1f1f23] flex items-center justify-between">
-            <h2 className="font-bold text-gray-100 text-base tracking-wide">最近活动日志</h2>
+                </span>
+              </h1>
+            </div>
+            <p className="text-gray-500 text-base mb-2">AI驱动，助力高效管理，数据实时可见，操作更便捷。</p>
+            <p className="text-xs text-gray-400 mb-8">
+              当前环境：{userInfo.ip ? `${userInfo.ip} / ` : ''}{userInfo.browser} / {userInfo.os}
+            </p>
+            <div className="mt-8">
+              <Link to="/bots" className="inline-block px-6 py-2 rounded-full bg-indigo-500 hover:bg-indigo-600 text-white font-semibold shadow transition text-base">去管理 &rarr;</Link>
+            </div>
           </div>
-          <div className="divide-y divide-[#23272f] flex-1 overflow-y-auto hide-scrollbar" style={{ minHeight: 320, maxHeight: 420 }}>
-            {logs.length === 0 ? (
-              <div className="px-4 py-6 text-center text-gray-500 text-xs">暂无活动记录</div>
-            ) : (
-              logs.slice(0, 12).map((log, idx) => {
+          {/* astronaut插画+上下晃动动画 */}
+          <img src="/img/astronaut.png" alt="AI插画" className="absolute right-4 bottom-0 w-56 md:w-64 select-none pointer-events-none" style={astronautAnim} />
+        </div>
+        {/* 数据卡片区（纯色背景，插画右侧，左侧丰富文案） */}
+        <div className="flex flex-col gap-6 h-full">
+          <div className="bg-blue-50 rounded-3xl shadow-md p-6 flex items-center justify-between min-h-[80px] relative">
+            <div>
+              <div className="text-lg font-bold text-gray-900 mb-1">当前已接入机器人</div>
+              <div className="text-2xl font-extrabold text-indigo-600">{stats.totalBots}</div>
+            </div>
+            <img src="/img/ai_tool_2.png" alt="机器人" className="w-16 h-16 object-contain" />
+          </div>
+          <div className="bg-green-50 rounded-3xl shadow-md p-6 flex items-center justify-between min-h-[80px] relative">
+            <div>
+              <div className="text-lg font-bold text-gray-900 mb-1">实时在线</div>
+              <div className="text-2xl font-extrabold text-green-500">{stats.onlineBots}</div>
+            </div>
+            <img src="/img/ai_tool_3.png" alt="在线" className="w-16 h-16 object-contain" />
+          </div>
+          <div className="bg-red-50 rounded-3xl shadow-md p-6 flex items-center justify-between min-h-[80px] relative">
+            <div>
+              <div className="text-lg font-bold text-gray-900 mb-1">离线待命</div>
+              <div className="text-2xl font-extrabold text-red-400">{stats.offlineBots}</div>
+            </div>
+            <img src="/img/ai_tool_4.png" alt="离线" className="w-16 h-16 object-contain" />
+          </div>
+        </div>
+      </div>
+      {/* 工具/功能区 */}
+      <div className="max-w-7xl mx-auto px-4 mt-12">
+        <h2 className="text-lg font-bold text-gray-900 mb-4">快捷操作 <span className="text-sm font-normal text-gray-400 ml-2">提供AI生活领域新功能</span></h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
+          <Link to="/bots/friends" className="bg-white rounded-2xl shadow-md p-6 flex items-center gap-4 hover:shadow-xl transition group relative">
+            <img src="/img/ai_tool_5.png" alt="好友管理" className="w-12 h-12 object-contain" />
+            <div>
+              <div className="text-base font-bold text-gray-900 mb-1 flex items-center">好友管理 <span className="ml-2 text-xs bg-pink-100 text-pink-500 rounded px-2 py-0.5 font-semibold">NEW</span></div>
+              <div className="text-gray-500 text-sm">管理微信好友列表</div>
+            </div>
+          </Link>
+          <Link to="/bots/moments" className="bg-white rounded-2xl shadow-md p-6 flex items-center gap-4 hover:shadow-xl transition group relative">
+            <img src="/img/ai_tool_6.png" alt="朋友圈管理" className="w-12 h-12 object-contain" />
+            <div>
+              <div className="text-base font-bold text-gray-900 mb-1 flex items-center">朋友圈管理 <span className="ml-2 text-xs bg-yellow-100 text-yellow-500 rounded px-2 py-0.5 font-semibold">NEW</span></div>
+              <div className="text-gray-500 text-sm">管理微信朋友圈内容</div>
+            </div>
+          </Link>
+          <Link to="/monitoring" className="bg-white rounded-2xl shadow-md p-6 flex items-center gap-4 hover:shadow-xl transition group relative">
+            <img src="/img/ai_tool_7.png" alt="日志监控" className="w-12 h-12 object-contain" />
+            <div>
+              <div className="text-base font-bold text-gray-900 mb-1">日志监控</div>
+              <div className="text-gray-500 text-sm">实时监控机器人状态</div>
+            </div>
+          </Link>
+          <Link to="/settings" className="bg-white rounded-2xl shadow-md p-6 flex items-center gap-4 hover:shadow-xl transition group relative">
+            <img src="/img/ai_tool_2.png" alt="系统设置" className="w-12 h-12 object-contain" />
+            <div>
+              <div className="text-base font-bold text-gray-900 mb-1">系统设置</div>
+              <div className="text-gray-500 text-sm">配置系统参数</div>
+            </div>
+          </Link>
+        </div>
+      </div>
+      {/* 日志区块 */}
+      <div className="max-w-7xl mx-auto px-4 mt-12 mb-8">
+        <h2 className="text-lg font-bold text-gray-900 mb-4">最近活动日志</h2>
+        <div className="bg-white rounded-3xl shadow-lg p-6 min-h-[180px]">
+          {logs.length === 0 ? (
+            <div className="text-center text-gray-400 text-sm py-8">暂无活动记录</div>
+          ) : (
+            <div className="divide-y divide-gray-100">
+              {logs.slice(0, 8).map((log, idx) => {
                 let typeColor = 'text-blue-400';
                 let typeLabel = '';
                 if (log.type === 'error') { typeColor = 'text-red-400'; typeLabel = '错误'; }
                 else if (log.type === 'success') { typeColor = 'text-green-400'; typeLabel = '成功'; }
                 else if (log.type === 'warning') { typeColor = 'text-yellow-400'; typeLabel = '警告'; }
                 return (
-                  <div key={idx} className="px-4 py-3 flex items-start group hover:bg-[#23272f] transition duration-200">
+                  <div key={idx} className="py-3 flex items-start group hover:bg-gray-50 transition duration-200 px-2 rounded-xl">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
                         {typeLabel && <span className={`font-mono text-xs ${typeColor} font-bold`}>{typeLabel}</span>}
                         <span className="text-[11px] text-gray-400">{log.timestamp ? new Date(log.timestamp).toLocaleString('zh-CN') : ''}</span>
                       </div>
-                      <div className="font-mono text-sm text-gray-100 break-all whitespace-pre-wrap transition-all duration-200 group-hover:text-blue-200">{log.message || log.msg || log.content || '未知内容'}</div>
+                      <div className="font-mono text-sm text-gray-700 break-all whitespace-pre-wrap transition-all duration-200 group-hover:text-blue-600">{log.message || log.msg || log.content || '未知内容'}</div>
                     </div>
                     <button
-                      className="ml-3 p-1 rounded hover:bg-[#23272f] text-gray-400 hover:text-blue-400 transition"
+                      className="ml-3 p-1 rounded hover:bg-gray-100 text-gray-400 hover:text-blue-400 transition"
                       title="复制日志内容"
                       onClick={() => handleCopyLog(log)}
                     >
@@ -349,67 +420,11 @@ const Dashboard: React.FC = () => {
                     </button>
                   </div>
                 );
-              })
-            )}
-          </div>
-          <div className="px-4 py-2 border-t border-[#23272f] text-right bg-[#1f1f23]">
-            <Link to="/monitoring" className="text-xs text-blue-400 hover:text-blue-200">查看全部日志 &rarr;</Link>
-          </div>
-        </div>
-        {/* 快速操作区（右侧1/3） */}
-        <div className="bg-gradient-to-br from-blue-50 via-white to-blue-100 rounded-lg shadow border border-blue-50 overflow-hidden flex flex-col">
-          <div className="px-4 py-2 bg-gradient-to-r from-blue-50 via-white to-blue-50 border-b border-blue-100">
-            <h2 className="font-bold text-blue-800 text-sm">快速操作</h2>
-          </div>
-          <div className="p-3 flex-1 grid grid-cols-2 gap-2">
-            {/* 新建机器人 */}
-            <Link to="/bots" className="relative flex items-center gap-3 py-3 px-3 rounded-xl bg-blue-500 hover:bg-blue-600 border border-blue-500 transition shadow-sm group overflow-hidden hover:shadow-lg hover:scale-105 duration-200">
-              <span className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-blue-600 text-white shadow-sm group-hover:scale-110 transition-transform text-xl"><Bot size={26} /></span>
-              <div className="flex-1 min-w-0">
-                <div className="font-semibold text-white text-lg">新建机器人</div>
-                <div className="text-sm text-blue-100">创建并配置新机器人</div>
-              </div>
-            </Link>
-            {/* 生成授权密钥 */}
-            <Link to="/auth-keys/new" className="relative flex items-center gap-3 py-3 px-3 rounded-xl bg-indigo-500 hover:bg-indigo-600 border border-indigo-500 transition shadow-sm group overflow-hidden hover:shadow-lg hover:scale-105 duration-200">
-              <span className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-indigo-600 text-white shadow-sm group-hover:scale-110 transition-transform text-xl"><Activity size={26} /></span>
-              <div className="flex-1 min-w-0">
-                <div className="font-semibold text-white text-lg">生成授权密钥</div>
-                <div className="text-sm text-indigo-100">创建新的授权密钥</div>
-              </div>
-            </Link>
-            {/* 查看监控 */}
-            <Link to="/monitoring" className="relative flex items-center gap-3 py-3 px-3 rounded-xl bg-cyan-500 hover:bg-cyan-600 border border-cyan-500 transition shadow-sm group overflow-hidden hover:shadow-lg hover:scale-105 duration-200">
-              <span className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-cyan-600 text-white shadow-sm group-hover:scale-110 transition-transform text-xl"><Activity size={26} /></span>
-              <div className="flex-1 min-w-0">
-                <div className="font-semibold text-white text-lg">查看监控</div>
-                <div className="text-sm text-cyan-100">实时监控机器人状态</div>
-              </div>
-            </Link>
-            {/* 系统设置 */}
-            <Link to="/settings" className="relative flex items-center gap-3 py-3 px-3 rounded-xl bg-gray-500 hover:bg-gray-600 border border-gray-500 transition shadow-sm group overflow-hidden hover:shadow-lg hover:scale-105 duration-200">
-              <span className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-gray-600 text-white shadow-sm group-hover:scale-110 transition-transform text-xl"><Clock size={26} /></span>
-              <div className="flex-1 min-w-0">
-                <div className="font-semibold text-white text-lg">系统设置</div>
-                <div className="text-sm text-gray-100">配置系统参数</div>
-              </div>
-            </Link>
-            {/* 好友管理 */}
-            <Link to="/bots/friends" className="relative flex items-center gap-3 py-3 px-3 rounded-xl bg-indigo-400 hover:bg-indigo-500 border border-indigo-400 transition shadow-sm group overflow-hidden hover:shadow-lg hover:scale-105 duration-200">
-              <span className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-indigo-500 text-white shadow-sm group-hover:scale-110 transition-transform text-xl"><Users size={26} /></span>
-              <div className="flex-1 min-w-0">
-                <div className="font-semibold text-white text-lg">好友管理</div>
-                <div className="text-sm text-indigo-100">管理微信好友列表</div>
-              </div>
-            </Link>
-            {/* 朋友圈管理 */}
-            <Link to="/bots/moments" className="relative flex items-center gap-3 py-3 px-3 rounded-xl bg-yellow-400 hover:bg-yellow-500 border border-yellow-400 transition shadow-sm group overflow-hidden hover:shadow-lg hover:scale-105 duration-200">
-              <span className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-yellow-500 text-white shadow-sm group-hover:scale-110 transition-transform text-xl"><Smartphone size={26} /></span>
-              <div className="flex-1 min-w-0">
-                <div className="font-semibold text-white text-lg">朋友圈管理</div>
-                <div className="text-sm text-yellow-100">管理微信朋友圈内容</div>
-              </div>
-            </Link>
+              })}
+            </div>
+          )}
+          <div className="text-right mt-4">
+            <Link to="/monitoring" className="text-xs text-blue-500 hover:text-blue-700">查看全部日志 &rarr;</Link>
           </div>
         </div>
       </div>
@@ -419,6 +434,14 @@ const Dashboard: React.FC = () => {
           日志内容已复制！
         </div>
       )}
+      {/* astronaut动画keyframes */}
+      <style>{`
+        @keyframes floatY {
+          0% { transform: translateY(0); }
+          50% { transform: translateY(-18px); }
+          100% { transform: translateY(0); }
+        }
+      `}</style>
     </div>
   );
 };

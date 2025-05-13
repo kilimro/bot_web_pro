@@ -621,9 +621,24 @@ ${sendLine}  } catch (error) {
       </div>
 
       {loading ? (
-        <div className="text-center py-12">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto"></div>
-          <p className="mt-4 text-gray-600">加载中...</p>
+        <div className="flex flex-col items-center justify-center py-16">
+          <div className="relative flex items-center justify-center h-20 w-20 mb-4">
+            {/* 彩色渐变旋转圈 */}
+            <div className="absolute inset-0 rounded-full border-4 border-t-transparent border-b-transparent border-l-blue-400 border-r-purple-400 animate-spin-slow"></div>
+            {/* 插件图标渐变放大缩小 */}
+            <div className="z-10 bg-gradient-to-br from-blue-400 to-purple-400 rounded-full p-4 shadow-lg animate-pulse">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
+                <path d="M7.5 2.5v3M16.5 2.5v3M12 7v3M12 17v3M2.5 7.5h3M18.5 7.5h3M2.5 16.5h3M18.5 16.5h3M7 12h3M14 12h3" stroke="#fff" strokeWidth="2" strokeLinecap="round"/>
+              </svg>
+            </div>
+            {/* 跳动的小点 */}
+            <div className="absolute bottom-0 left-1/2 -translate-x-1/2 flex space-x-1">
+              <span className="w-2 h-2 bg-blue-400 rounded-full animate-bounce [animation-delay:0s]"></span>
+              <span className="w-2 h-2 bg-purple-400 rounded-full animate-bounce [animation-delay:0.2s]"></span>
+              <span className="w-2 h-2 bg-blue-400 rounded-full animate-bounce [animation-delay:0.4s]"></span>
+            </div>
+          </div>
+          <p className="mt-2 text-lg text-blue-500 font-semibold tracking-wide animate-pulse">插件加载中…</p>
         </div>
       ) : filteredPlugins.length === 0 ? (
         <div className="text-center py-12">
