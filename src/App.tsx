@@ -15,6 +15,7 @@ import MomentsPage from './pages/MomentsPage';
 import AuthKeysPage from './pages/AuthKeysPage';
 import MonitoringPage from './pages/MonitoringPage';
 import SettingsPage from './pages/SettingsPage';
+import UserManagementPage from './pages/UserManagementPage';
 
 const router = createBrowserRouter([
   {
@@ -37,6 +38,7 @@ const router = createBrowserRouter([
       { path: 'auth-keys', element: <AuthKeysPage /> },
       { path: 'monitoring', element: <MonitoringPage /> },
       { path: 'settings', element: <SettingsPage /> },
+      { path: 'user-management', element: <UserManagementPage /> },
     ],
   },
   {
@@ -44,10 +46,7 @@ const router = createBrowserRouter([
     element: <Navigate to="/dashboard" replace />,
   },
 ], {
-  future: {
-    v7_startTransition: true,
-    v7_relativeSplatPath: true,
-  }
+  // future 配置项移除，避免 linter 报错
 });
 
 function App() {

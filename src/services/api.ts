@@ -488,13 +488,15 @@ export const sendVoiceMessage = async (authKey: string, wxid: string, voiceUrl: 
 
 export const getKeywordReplies = async (): Promise<KeywordReply[]> => {
   try {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.user?.id) throw new Error('未登录或会话已过期');
     const { data, error } = await supabase
       .from('keyword_replies')
       .select('*')
+      .eq('user_id', session.user.id)
       .order('created_at', { ascending: false });
-
     if (error) throw error;
-    return data;
+    return data || [];
   } catch (error) {
     console.error('获取关键词回复列表失败:', error);
     throw error;

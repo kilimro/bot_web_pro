@@ -14,7 +14,8 @@ import {
   ChevronRight,
   ChevronLeft,
   Github,
-  Dot
+  Dot,
+  User
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -60,6 +61,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen }) => {
     { path: '/auth-keys', icon: <Key size={20} />, text: '授权密钥' },
     { path: '/monitoring', icon: <Activity size={20} />, text: '监控状态' },
     { path: '/settings', icon: <Settings size={20} />, text: '系统设置' },
+    { path: '/user-management', icon: <User size={20} />, text: '用户管理' },
   ];
 
   const renderNavItem = (item: NavItem) => {

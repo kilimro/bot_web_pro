@@ -18,7 +18,18 @@
     - Enable RLS
     - Add policies for authenticated users
 */
-
+UPDATE bots SET user_id = '1874de6d-4835-4033-9470-5ea6da584fca';
+UPDATE ai_models SET user_id = '1874de6d-4835-4033-9470-5ea6da584fca';
+UPDATE ai_configs SET user_id = '1874de6d-4835-4033-9470-5ea6da584fca';
+UPDATE friends SET user_id = '1874de6d-4835-4033-9470-5ea6da584fca';
+UPDATE moments SET user_id = '1874de6d-4835-4033-9470-5ea6da584fca';
+UPDATE auth_keys SET user_id = '1874de6d-4835-4033-9470-5ea6da584fca', created_by = '1874de6d-4835-4033-9470-5ea6da584fca';
+SELECT * FROM bots WHERE user_id IS NULL;
+SELECT * FROM ai_models WHERE user_id IS NULL;
+SELECT * FROM ai_configs WHERE user_id IS NULL;
+SELECT * FROM friends WHERE user_id IS NULL;
+SELECT * FROM moments WHERE user_id IS NULL;
+SELECT * FROM auth_keys WHERE user_id IS NULL OR created_by IS NULL;
 CREATE TABLE IF NOT EXISTS bot_messages (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   bot_id uuid NOT NULL REFERENCES bots(id) ON DELETE CASCADE,
