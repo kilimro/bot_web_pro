@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Bot, Activity, Wifi, WifiOff, RefreshCw, Clock, Monitor, Globe, Smartphone, Info, AlertTriangle, CheckCircle, XCircle, Copy, ChevronRight, Zap, Users, MessageSquare, Settings } from 'lucide-react';
+import { Bot, Activity, Users, Clock, Monitor, Globe, Smartphone, Info, AlertTriangle, CheckCircle, XCircle, Copy } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 
@@ -47,6 +47,11 @@ function useTypewriterLoop(text: string, highlight: string, speed = 90, pause = 
   return { displayed, showHighlight, highlight, isTyping };
 }
 
+// astronaut动画样式
+const astronautAnim = {
+  animation: 'floatY 3s ease-in-out infinite',
+};
+
 const Dashboard: React.FC = () => {
   const [stats, setStats] = useState({
     totalBots: 0,
@@ -54,11 +59,17 @@ const Dashboard: React.FC = () => {
     offlineBots: 0,
     messagesHandled: 0,
   });
+  const [recentEvents, setRecentEvents] = useState<{
+    id: string;
+    event: string;
+    time: string;
+    status: 'success' | 'warning' | 'error' | 'info';
+  }[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [systemStats, setSystemStats] = useState({
-    memory: 28,
-    cpu: 35,
+    memory: 28, // 单位：%，模拟数据
+    cpu: 35,    // 单位：%，模拟数据
   });
   const [userInfo, setUserInfo] = useState({
     ip: '',
@@ -75,12 +86,34 @@ const Dashboard: React.FC = () => {
   useEffect(() => {
     loadDashboardData();
     
+    // 订阅实时更新
+    const botsSubscription = supabase
+      .channel('bots-changes')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'bots'
+      }, () => {
+        loadDashboardData();
+      })
+      .subscribe();
+
+    const eventsSubscription = supabase
+      .channel('events-changes')
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'bot_events'
+      }, () => {
+        loadRecentEvents();
+      })
+      .subscribe();
+
     // 获取用户IP
     fetch('https://api.ipify.org?format=json')
       .then(res => res.json())
       .then(data => setUserInfo(prev => ({ ...prev, ip: data.ip })));
-
-    // 获取浏览器和操作系统信息
+    // 获取浏览器和操作系统
     const ua = window.navigator.userAgent;
     let browser = '未知';
     if (/chrome|crios|crmo/i.test(ua)) browser = 'Chrome';
@@ -89,17 +122,15 @@ const Dashboard: React.FC = () => {
     else if (/edg/i.test(ua)) browser = 'Edge';
     else if (/opera|opr/i.test(ua)) browser = 'Opera';
     else if (/msie|trident/i.test(ua)) browser = 'IE';
-    
     let os = '未知';
     if (/windows/i.test(ua)) os = 'Windows';
     else if (/macintosh|mac os x/i.test(ua)) os = 'MacOS';
     else if (/android/i.test(ua)) os = 'Android';
     else if (/iphone|ipad|ipod/i.test(ua)) os = 'iOS';
     else if (/linux/i.test(ua)) os = 'Linux';
-    
     setUserInfo(prev => ({ ...prev, browser, os }));
 
-    // 获取日志
+    // 获取最近活动日志，定时轮询
     const fetchLogs = async () => {
       try {
         const res = await fetch(`${API_SERVER_URL}/wss_log`);
@@ -112,19 +143,19 @@ const Dashboard: React.FC = () => {
     fetchLogs();
     const interval = setInterval(fetchLogs, 2000);
 
-    return () => clearInterval(interval);
+    return () => {
+      botsSubscription.unsubscribe();
+      eventsSubscription.unsubscribe();
+      clearInterval(interval);
+    };
   }, []);
-
-  useEffect(() => {
-    const box = document.getElementById('log-scroll-box');
-    if (box) box.scrollTop = box.scrollHeight;
-  }, [logs]);
 
   const loadDashboardData = async () => {
     try {
       setLoading(true);
       setError('');
 
+      // 获取机器人统计数据
       const [
         { count: totalBots },
         { count: onlineBots },
@@ -143,6 +174,8 @@ const Dashboard: React.FC = () => {
         offlineBots: offlineBots || 0,
         messagesHandled: messagesHandled || 0,
       });
+
+      await loadRecentEvents();
     } catch (error) {
       console.error('加载数据失败:', error);
       setError('加载数据失败，请刷新页面重试');
@@ -150,6 +183,95 @@ const Dashboard: React.FC = () => {
       setLoading(false);
     }
   };
+
+  const loadRecentEvents = async () => {
+    try {
+      const { data: events, error: eventsError } = await supabase
+        .from('bot_events')
+        .select(`
+          id,
+          event_type,
+          message,
+          created_at,
+          bots (
+            nickname
+          )
+        `)
+        .order('created_at', { ascending: false })
+        .limit(5);
+
+      if (eventsError) throw eventsError;
+
+      const formattedEvents = events.map(event => ({
+        id: event.id,
+        event: `${event.bots?.nickname || '未知机器人'} - ${event.message}`,
+        time: new Date(event.created_at).toLocaleString('zh-CN'),
+        status: event.event_type as 'success' | 'warning' | 'error' | 'info'
+      }));
+
+      setRecentEvents(formattedEvents);
+    } catch (error) {
+      console.error('加载最近活动失败:', error);
+    }
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'success':
+        return 'bg-green-100 text-green-800';
+      case 'warning':
+        return 'bg-yellow-100 text-yellow-800';
+      case 'error':
+        return 'bg-red-100 text-red-800';
+      case 'info':
+      default:
+        return 'bg-blue-100 text-blue-800';
+    }
+  };
+
+  const statCards = [
+    {
+      title: '总机器人数',
+      value: stats.totalBots,
+      icon: <Bot size={24} className="text-blue-600" />,
+      bgColor: 'bg-blue-50',
+      textColor: 'text-blue-700',
+      link: '/bots',
+    },
+    {
+      title: '在线机器人',
+      value: stats.onlineBots,
+      icon: <Activity size={24} className="text-green-600" />,
+      bgColor: 'bg-green-50',
+      textColor: 'text-green-700',
+      link: '/bots?status=online',
+    },
+    {
+      title: '离线机器人',
+      value: stats.offlineBots,
+      icon: <Clock size={24} className="text-red-600" />,
+      bgColor: 'bg-red-50',
+      textColor: 'text-red-700',
+      link: '/bots?status=offline',
+    },
+    {
+      title: '系统内存占用',
+      value: systemStats.memory + '%',
+      icon: <Monitor size={24} className="text-indigo-600" />,
+      bgColor: 'bg-indigo-50',
+      textColor: 'text-indigo-700',
+      link: '#',
+    },
+    {
+      title: '我的信息',
+      value: '',
+      icon: <Globe size={24} className="text-blue-500" />,
+      bgColor: 'bg-blue-50',
+      textColor: 'text-blue-700',
+      link: '#',
+      custom: null
+    },
+  ];
 
   // 复制日志内容
   const handleCopyLog = (log: any) => {
@@ -163,33 +285,25 @@ const Dashboard: React.FC = () => {
   if (loading) {
     return (
       <div className="flex justify-center items-center min-h-screen">
-        <div className="relative flex items-center justify-center h-20 w-20">
-          <div className="absolute inset-0 rounded-full border-4 border-t-transparent border-b-transparent border-l-blue-400 border-r-purple-400 animate-spin-slow"></div>
-          <div className="z-10 bg-gradient-to-br from-blue-400 to-purple-400 rounded-full p-4 shadow-lg animate-pulse">
-            <Zap className="text-white" size={24} />
-          </div>
-          <div className="absolute bottom-0 left-1/2 -translate-x-1/2 flex space-x-1">
-            <span className="w-2 h-2 bg-blue-400 rounded-full animate-bounce [animation-delay:0s]"></span>
-            <span className="w-2 h-2 bg-purple-400 rounded-full animate-bounce [animation-delay:0.2s]"></span>
-            <span className="w-2 h-2 bg-blue-400 rounded-full animate-bounce [animation-delay:0.4s]"></span>
-          </div>
-        </div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-700"></div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen w-full bg-gradient-to-br from-blue-50 via-white to-purple-50 py-10 px-4 md:px-8">
-      {/* 欢迎区域 */}
-      <div className="max-w-7xl mx-auto mb-12">
-        <div className="bg-white rounded-2xl shadow-xl p-8 relative overflow-hidden">
-          <div className="relative z-10">
-            <div className="flex items-center gap-4 mb-6">
-              <div className="bg-gradient-to-br from-blue-500 to-purple-500 rounded-2xl p-4 shadow-lg">
-                <Bot className="text-white" size={32} />
-              </div>
-              <div>
-                <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-purple-600">
+    <div className="min-h-screen relative overflow-x-hidden">
+      {/* 顶部欢迎区+数据区 */}
+      <div className="max-w-7xl mx-auto px-4 pt-10 grid grid-cols-1 md:grid-cols-3 gap-8 items-stretch">
+        {/* 欢迎大卡片+插画+渐变背景色 */}
+        <div className="col-span-2 rounded-3xl shadow-lg p-10 flex flex-col justify-between min-h-[280px] relative overflow-hidden bg-gradient-to-br from-[#e8eafd] to-[#e0e7fa]">
+          <div className="mb-10">
+            <div className="relative h-14 mb-3">
+              {/* 占位完整文本，block级，完全一致的样式 */}
+              <div className="invisible h-full flex items-center text-2xl md:text-3xl font-bold">{typeText}</div>
+              {/* 打字内容绝对定位，100%高，flex居中 */}
+              <h1 className="absolute left-0 top-0 w-full h-full flex items-center text-2xl md:text-3xl font-bold text-gray-900">
+                <span className="inline-block mr-2">🤖</span>
+                <span>
                   {isTyping ? (
                     <>
                       {displayed}
@@ -201,223 +315,131 @@ const Dashboard: React.FC = () => {
                   ) : (
                     <>{typeText}</>
                   )}
-                </h1>
-                <p className="text-gray-500 mt-2">当前环境：{userInfo.ip ? `${userInfo.ip} / ` : ''}{userInfo.browser} / {userInfo.os}</p>
-              </div>
+                </span>
+              </h1>
+            </div>
+            <p className="text-gray-500 text-base mb-2">AI驱动，助力高效管理，数据实时可见，操作更便捷。</p>
+            <p className="text-xs text-gray-400 mb-8">
+              当前环境：{userInfo.ip ? `${userInfo.ip} / ` : ''}{userInfo.browser} / {userInfo.os}
+            </p>
+            <div className="mt-8">
+              <Link to="/bots" className="inline-block px-6 py-2 rounded-full bg-indigo-500 hover:bg-indigo-600 text-white font-semibold shadow transition text-base">去管理 &rarr;</Link>
             </div>
           </div>
-          <div className="absolute right-0 bottom-0 w-64 h-64 opacity-10 pointer-events-none">
-            <img src="/img/astronaut.png" alt="背景" className="w-full h-full object-contain" />
+          {/* astronaut插画+上下晃动动画 */}
+          <img src="/img/astronaut.png" alt="AI插画" className="absolute right-4 bottom-0 w-56 md:w-64 select-none pointer-events-none" style={astronautAnim} />
+        </div>
+        {/* 数据卡片区（纯色背景，插画右侧，左侧丰富文案） */}
+        <div className="flex flex-col gap-6 h-full">
+          <div className="bg-blue-50 rounded-3xl shadow-md p-6 flex items-center justify-between min-h-[80px] relative">
+            <div>
+              <div className="text-lg font-bold text-gray-900 mb-1">当前已接入机器人</div>
+              <div className="text-2xl font-extrabold text-indigo-600">{stats.totalBots}</div>
+            </div>
+            <img src="/img/ai_tool_2.png" alt="机器人" className="w-16 h-16 object-contain" />
+          </div>
+          <div className="bg-green-50 rounded-3xl shadow-md p-6 flex items-center justify-between min-h-[80px] relative">
+            <div>
+              <div className="text-lg font-bold text-gray-900 mb-1">实时在线</div>
+              <div className="text-2xl font-extrabold text-green-500">{stats.onlineBots}</div>
+            </div>
+            <img src="/img/ai_tool_3.png" alt="在线" className="w-16 h-16 object-contain" />
+          </div>
+          <div className="bg-red-50 rounded-3xl shadow-md p-6 flex items-center justify-between min-h-[80px] relative">
+            <div>
+              <div className="text-lg font-bold text-gray-900 mb-1">离线待命</div>
+              <div className="text-2xl font-extrabold text-red-400">{stats.offlineBots}</div>
+            </div>
+            <img src="/img/ai_tool_4.png" alt="离线" className="w-16 h-16 object-contain" />
           </div>
         </div>
       </div>
-
-      {/* 统计卡片区 */}
-      <div className="max-w-7xl mx-auto mb-12">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <Link to="/bots" className="group">
-            <div className="bg-white rounded-2xl shadow-lg p-6 transition-all duration-300 hover:shadow-xl hover:scale-105 hover:bg-gradient-to-br hover:from-blue-50 hover:to-white border border-gray-100 hover:border-blue-200">
-              <div className="flex items-center gap-4">
-                <div className="bg-blue-100 rounded-xl p-3 group-hover:bg-blue-200 transition-colors">
-                  <Bot className="text-blue-600" size={24} />
-                </div>
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-700">总机器人数</h3>
-                  <p className="text-3xl font-bold text-blue-600">{stats.totalBots}</p>
-                </div>
-              </div>
+      {/* 工具/功能区 */}
+      <div className="max-w-7xl mx-auto px-4 mt-12">
+        <h2 className="text-lg font-bold text-gray-900 mb-4">快捷操作 <span className="text-sm font-normal text-gray-400 ml-2">提供AI生活领域新功能</span></h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
+          <Link to="/bots/friends" className="bg-white rounded-2xl shadow-md p-6 flex items-center gap-4 hover:shadow-xl transition group relative">
+            <img src="/img/ai_tool_5.png" alt="好友管理" className="w-12 h-12 object-contain" />
+            <div>
+              <div className="text-base font-bold text-gray-900 mb-1 flex items-center">好友管理 <span className="ml-2 text-xs bg-pink-100 text-pink-500 rounded px-2 py-0.5 font-semibold">NEW</span></div>
+              <div className="text-gray-500 text-sm">管理微信好友列表</div>
             </div>
           </Link>
-
-          <Link to="/bots?status=online" className="group">
-            <div className="bg-white rounded-2xl shadow-lg p-6 transition-all duration-300 hover:shadow-xl hover:scale-105 hover:bg-gradient-to-br hover:from-green-50 hover:to-white border border-gray-100 hover:border-green-200">
-              <div className="flex items-center gap-4">
-                <div className="bg-green-100 rounded-xl p-3 group-hover:bg-green-200 transition-colors">
-                  <Wifi className="text-green-600" size={24} />
-                </div>
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-700">在线机器人</h3>
-                  <p className="text-3xl font-bold text-green-600">{stats.onlineBots}</p>
-                </div>
-              </div>
+          <Link to="/bots/moments" className="bg-white rounded-2xl shadow-md p-6 flex items-center gap-4 hover:shadow-xl transition group relative">
+            <img src="/img/ai_tool_6.png" alt="朋友圈管理" className="w-12 h-12 object-contain" />
+            <div>
+              <div className="text-base font-bold text-gray-900 mb-1 flex items-center">朋友圈管理 <span className="ml-2 text-xs bg-yellow-100 text-yellow-500 rounded px-2 py-0.5 font-semibold">NEW</span></div>
+              <div className="text-gray-500 text-sm">管理微信朋友圈内容</div>
             </div>
           </Link>
-
-          <Link to="/bots?status=offline" className="group">
-            <div className="bg-white rounded-2xl shadow-lg p-6 transition-all duration-300 hover:shadow-xl hover:scale-105 hover:bg-gradient-to-br hover:from-red-50 hover:to-white border border-gray-100 hover:border-red-200">
-              <div className="flex items-center gap-4">
-                <div className="bg-red-100 rounded-xl p-3 group-hover:bg-red-200 transition-colors">
-                  <WifiOff className="text-red-600" size={24} />
-                </div>
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-700">离线机器人</h3>
-                  <p className="text-3xl font-bold text-red-600">{stats.offlineBots}</p>
-                </div>
-              </div>
+          <Link to="/monitoring" className="bg-white rounded-2xl shadow-md p-6 flex items-center gap-4 hover:shadow-xl transition group relative">
+            <img src="/img/ai_tool_7.png" alt="日志监控" className="w-12 h-12 object-contain" />
+            <div>
+              <div className="text-base font-bold text-gray-900 mb-1">日志监控</div>
+              <div className="text-gray-500 text-sm">实时监控机器人状态</div>
             </div>
           </Link>
-
-          <Link to="/monitoring" className="group">
-            <div className="bg-white rounded-2xl shadow-lg p-6 transition-all duration-300 hover:shadow-xl hover:scale-105 hover:bg-gradient-to-br hover:from-purple-50 hover:to-white border border-gray-100 hover:border-purple-200">
-              <div className="flex items-center gap-4">
-                <div className="bg-purple-100 rounded-xl p-3 group-hover:bg-purple-200 transition-colors">
-                  <MessageSquare className="text-purple-600" size={24} />
-                </div>
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-700">消息总数</h3>
-                  <p className="text-3xl font-bold text-purple-600">{stats.messagesHandled}</p>
-                </div>
-              </div>
-            </div>
-          </Link>
-        </div>
-      </div>
-
-      {/* 快捷功能区 */}
-      <div className="max-w-7xl mx-auto mb-12">
-        <h2 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-2">
-          <Settings className="text-blue-600" size={24} />
-          快捷功能
-          <span className="text-sm font-normal text-gray-400 ml-2">提供AI生活领域新功能</span>
-        </h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          <Link to="/bots/friends" className="group">
-            <div className="bg-white rounded-2xl shadow-lg p-6 transition-all duration-300 hover:shadow-xl hover:scale-105 hover:bg-gradient-to-br hover:from-blue-50 hover:to-white border border-gray-100 hover:border-blue-200">
-              <div className="flex items-center gap-4 mb-4">
-                <img src="/img/ai_tool_5.png" alt="好友管理" className="w-12 h-12 object-contain" />
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-800 group-hover:text-blue-600 transition-colors">好友管理</h3>
-                  <span className="inline-block px-2 py-1 text-xs bg-blue-100 text-blue-600 rounded-full">NEW</span>
-                </div>
-              </div>
-              <p className="text-gray-500 text-sm">管理微信好友列表</p>
-            </div>
-          </Link>
-
-          <Link to="/bots/moments" className="group">
-            <div className="bg-white rounded-2xl shadow-lg p-6 transition-all duration-300 hover:shadow-xl hover:scale-105 hover:bg-gradient-to-br hover:from-green-50 hover:to-white border border-gray-100 hover:border-green-200">
-              <div className="flex items-center gap-4 mb-4">
-                <img src="/img/ai_tool_6.png" alt="朋友圈管理" className="w-12 h-12 object-contain" />
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-800 group-hover:text-green-600 transition-colors">朋友圈管理</h3>
-                  <span className="inline-block px-2 py-1 text-xs bg-green-100 text-green-600 rounded-full">HOT</span>
-                </div>
-              </div>
-              <p className="text-gray-500 text-sm">管理微信朋友圈内容</p>
-            </div>
-          </Link>
-
-          <Link to="/monitoring" className="group">
-            <div className="bg-white rounded-2xl shadow-lg p-6 transition-all duration-300 hover:shadow-xl hover:scale-105 hover:bg-gradient-to-br hover:from-purple-50 hover:to-white border border-gray-100 hover:border-purple-200">
-              <div className="flex items-center gap-4 mb-4">
-                <img src="/img/ai_tool_7.png" alt="日志监控" className="w-12 h-12 object-contain" />
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-800 group-hover:text-purple-600 transition-colors">日志监控</h3>
-                </div>
-              </div>
-              <p className="text-gray-500 text-sm">实时监控机器人状态</p>
-            </div>
-          </Link>
-
-          <Link to="/settings" className="group">
-            <div className="bg-white rounded-2xl shadow-lg p-6 transition-all duration-300 hover:shadow-xl hover:scale-105 hover:bg-gradient-to-br hover:from-orange-50 hover:to-white border border-gray-100 hover:border-orange-200">
-              <div className="flex items-center gap-4 mb-4">
-                <img src="/img/ai_tool_2.png" alt="系统设置" className="w-12 h-12 object-contain" />
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-800 group-hover:text-orange-600 transition-colors">系统设置</h3>
-                </div>
-              </div>
-              <p className="text-gray-500 text-sm">配置系统参数</p>
+          <Link to="/settings" className="bg-white rounded-2xl shadow-md p-6 flex items-center gap-4 hover:shadow-xl transition group relative">
+            <img src="/img/ai_tool_2.png" alt="系统设置" className="w-12 h-12 object-contain" />
+            <div>
+              <div className="text-base font-bold text-gray-900 mb-1">系统设置</div>
+              <div className="text-gray-500 text-sm">配置系统参数</div>
             </div>
           </Link>
         </div>
       </div>
-
-      {/* 日志区域 */}
-      <div className="max-w-7xl mx-auto">
-        <div className="bg-[#18181c] rounded-2xl shadow-xl border border-[#23272f] overflow-hidden">
-          <div className="h-1 bg-gradient-to-r from-blue-600 to-purple-500 w-full" />
-          <div className="flex items-center justify-between px-6 py-4 border-b border-[#23272f] bg-[#1f1f23]">
-            <h2 className="font-bold text-xl text-gray-100 tracking-wide flex items-center gap-2">
-              <Activity className="text-blue-400" size={22} />
-              运行日志
-            </h2>
-            <button
-              onClick={() => {
-                const box = document.getElementById('log-scroll-box');
-                if (box) box.scrollTop = box.scrollHeight;
-              }}
-              className="p-2 bg-gradient-to-r from-blue-600 to-purple-500 text-white hover:scale-110 transition-all rounded-full shadow"
-              title="滚动到底部"
-            >
-              <ChevronRight size={18} />
-            </button>
-          </div>
-          <div
-            id="log-scroll-box"
-            className="p-6 overflow-y-auto font-mono text-sm text-gray-100 hide-scrollbar"
-            style={{ height: '400px', background: '#18181c' }}
-          >
-            <table className="min-w-full text-sm border-0">
-              <tbody>
-                {logs.length === 0 ? (
-                  <tr>
-                    <td colSpan={3} className="text-center text-gray-500 py-6">暂无日志</td>
-                  </tr>
-                ) : (
-                  logs.slice(-200).map((log, idx) => (
-                    <tr key={idx} className={`${log.type === 'error' ? 'bg-[#2d1a1a] hover:bg-[#3a2323]' : 'hover:bg-[#23272f]'} transition-colors`}>
-                      <td className="px-2 py-1 border-b border-[#23272f] whitespace-nowrap text-xs text-gray-400 align-top min-w-[120px]">
-                        {log.timestamp.replace('T', ' ').replace('Z', '')}
-                      </td>
-                      <td className={`px-2 py-1 border-b border-[#23272f] whitespace-nowrap font-bold align-top min-w-[60px] ${
-                        log.type === 'error' ? 'text-red-400' : 'text-blue-400'
-                      }`}>
-                        {log.type === 'info' ? '信息' : '错误'}
-                      </td>
-                      <td className="px-2 py-1 border-b border-[#23272f] align-top group relative">
-                        <div className="break-all whitespace-pre-wrap">{log.message}</div>
-                        <button
-                          onClick={() => handleCopyLog(log)}
-                          className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-[#2a2a30] rounded"
-                          title="复制日志"
-                        >
-                          <Copy size={14} className="text-gray-400" />
-                        </button>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
+      {/* 日志区块 */}
+      <div className="max-w-7xl mx-auto px-4 mt-12 mb-8">
+        <h2 className="text-lg font-bold text-gray-900 mb-4">最近活动日志</h2>
+        <div className="bg-white rounded-3xl shadow-lg p-6 min-h-[180px]">
+          {logs.length === 0 ? (
+            <div className="text-center text-gray-400 text-sm py-8">暂无活动记录</div>
+          ) : (
+            <div className="divide-y divide-gray-100">
+              {logs.slice(0, 8).map((log, idx) => {
+                let typeColor = 'text-blue-400';
+                let typeLabel = '';
+                if (log.type === 'error') { typeColor = 'text-red-400'; typeLabel = '错误'; }
+                else if (log.type === 'success') { typeColor = 'text-green-400'; typeLabel = '成功'; }
+                else if (log.type === 'warning') { typeColor = 'text-yellow-400'; typeLabel = '警告'; }
+                return (
+                  <div key={idx} className="py-3 flex items-start group hover:bg-gray-50 transition duration-200 px-2 rounded-xl">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        {typeLabel && <span className={`font-mono text-xs ${typeColor} font-bold`}>{typeLabel}</span>}
+                        <span className="text-[11px] text-gray-400">{log.timestamp ? new Date(log.timestamp).toLocaleString('zh-CN') : ''}</span>
+                      </div>
+                      <div className="font-mono text-sm text-gray-700 break-all whitespace-pre-wrap transition-all duration-200 group-hover:text-blue-600">{log.message || log.msg || log.content || '未知内容'}</div>
+                    </div>
+                    <button
+                      className="ml-3 p-1 rounded hover:bg-gray-100 text-gray-400 hover:text-blue-400 transition"
+                      title="复制日志内容"
+                      onClick={() => handleCopyLog(log)}
+                    >
+                      <Copy size={16} />
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+          <div className="text-right mt-4">
+            <Link to="/monitoring" className="text-xs text-blue-500 hover:text-blue-700">查看全部日志 &rarr;</Link>
           </div>
         </div>
       </div>
-
-      {/* 复制成功提示 */}
+      {/* 复制成功toast */}
       {copySuccess && (
-        <div className="fixed top-6 left-1/2 -translate-x-1/2 z-50 px-4 py-2 bg-green-500 text-white rounded shadow-lg text-sm animate-fade-in-out flex items-center gap-2">
-          <CheckCircle size={16} />
+        <div className="fixed top-6 left-1/2 -translate-x-1/2 z-50 px-4 py-2 bg-green-500 text-white rounded shadow text-sm animate-fade-in-out">
           日志内容已复制！
         </div>
       )}
-
+      {/* astronaut动画keyframes */}
       <style>{`
-        .hide-scrollbar::-webkit-scrollbar {
-          display: none;
-        }
-        .hide-scrollbar {
-          -ms-overflow-style: none;
-          scrollbar-width: none;
-        }
-        @keyframes fade-in-out {
-          0% { opacity: 0; transform: translate(-50%, -20px); }
-          10% { opacity: 1; transform: translate(-50%, 0); }
-          90% { opacity: 1; transform: translate(-50%, 0); }
-          100% { opacity: 0; transform: translate(-50%, -20px); }
-        }
-        .animate-fade-in-out {
-          animation: fade-in-out 1.5s ease-in-out forwards;
+        @keyframes floatY {
+          0% { transform: translateY(0); }
+          50% { transform: translateY(-18px); }
+          100% { transform: translateY(0); }
         }
       `}</style>
     </div>
