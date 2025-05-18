@@ -30,10 +30,10 @@ const QrCodeLoginModal: React.FC<QrCodeLoginModalProps> = ({ onClose, onSuccess,
   const [status, setStatus] = useState<string>('正在生成授权码...');
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [isScanning, setIsScanning] = useState(false);
-  const [polling, setPolling] = useState(false);
-  const [pollingTimeout, setPollingTimeout] = useState<NodeJS.Timeout | null>(null);
+  const [isPolling, setIsPolling] = useState(false);
   const [pollingCount, setPollingCount] = useState(0);
+  const [showConfirmButton, setShowConfirmButton] = useState(false);
+  const pollingTimeoutRef = React.useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
     if (authKey) {
@@ -44,33 +44,41 @@ const QrCodeLoginModal: React.FC<QrCodeLoginModalProps> = ({ onClose, onSuccess,
     }
   }, []);
 
+  // 自动轮询扫码状态
   useEffect(() => {
-    if (isScanning) {
-      setPolling(true);
+    if (isPolling) {
       setPollingCount(0);
+      setShowConfirmButton(false);
+      let found = false;
       const timer = setInterval(async () => {
-        setPollingCount(count => count + 1);
+        setPollingCount(count => {
+          const nextCount = count + 1;
+          if (nextCount >= 25 || found) {
+            clearInterval(timer);
+            setIsPolling(false);
+            if (!found) setShowConfirmButton(true);
+          }
+          return nextCount;
+        });
+        if (found) return;
         try {
           const checkScanRes = await fetch(`${API_BASE_URL}/login/CheckLoginStatus?key=` + innerAuthKey);
           const checkScanData = await checkScanRes.json();
-          console.log('[自动轮询] 扫码API返回:', checkScanData);
+          console.log('【CheckLoginStatus 返回】', checkScanData);
           if (checkScanData.Code === 200 && Number(checkScanData.Data.state) === 2) {
+            found = true;
             clearInterval(timer);
-            setPolling(false);
-            await handleConfirmScan(true);
-          } else if (pollingCount >= 30) {
-            clearInterval(timer);
-            setPolling(false);
-            setError('扫码超时，请刷新二维码重试');
+            setIsPolling(false);
+            await handleGetProfile();
           }
         } catch (e) {
           // 忽略单次异常
         }
       }, 2000);
-      setPollingTimeout(timer);
+      pollingTimeoutRef.current = timer;
       return () => clearInterval(timer);
     }
-  }, [isScanning, innerAuthKey]);
+  }, [isPolling, innerAuthKey]);
 
   const initQrCode = async (key: string) => {
     try {
@@ -85,7 +93,7 @@ const QrCodeLoginModal: React.FC<QrCodeLoginModalProps> = ({ onClose, onSuccess,
         },
         body: JSON.stringify({
           Check: false,
-          Proxy: regionProxy || '' // 这里根据地区传递代理
+          Proxy: regionProxy || ''
         })
       });
       const qrData = await qrResponse.json();
@@ -95,7 +103,7 @@ const QrCodeLoginModal: React.FC<QrCodeLoginModalProps> = ({ onClose, onSuccess,
       setQrCodeUrl(qrData.Data.QrCodeUrl);
       setStatus('请使用bot扫描二维码登录');
       setIsLoading(false);
-      setIsScanning(true);
+      setIsPolling(true); // 开始自动轮询
     } catch (error) {
       setError(error instanceof Error ? error.message : '初始化登录失败');
       setIsLoading(false);
@@ -119,74 +127,94 @@ const QrCodeLoginModal: React.FC<QrCodeLoginModalProps> = ({ onClose, onSuccess,
     }
   };
 
-  const handleConfirmScan = async (fromPolling = false) => {
+  // 新增：独立获取资料逻辑（参考导入机器人流程）
+  const handleGetProfile = async () => {
     try {
-      if (!fromPolling) {
-        console.log('点击了已扫码确认，authKey:', innerAuthKey);
-      }
       setIsLoading(true);
       setError(null);
-      
-      const checkScanRes = await fetch(`${API_BASE_URL}/login/CheckLoginStatus?key=` + innerAuthKey);
-      const checkScanData = await checkScanRes.json();
-      console.log('扫码API返回:', checkScanData);
-      
-      if (checkScanData.Code !== 200 || Number(checkScanData.Data.state) !== 2) {
-        if (!fromPolling) {
-          console.warn('扫码状态不通过，Code:', checkScanData.Code, 'state:', checkScanData.Data.state);
-          throw new Error('请先完成扫码登录');
-        } else {
-          setIsLoading(false);
-          return;
-        }
-      }
-
+      // 1. 检查机器人在线状态
       const loginStatusRes = await fetch(`${API_BASE_URL}/login/GetLoginStatus?key=` + innerAuthKey);
       const loginStatusData = await loginStatusRes.json();
-      console.log('在线状态API返回:', loginStatusData);
-      if (
-        loginStatusData.Code !== 200 ||
-        !loginStatusData.Data ||
-        loginStatusData.Data.loginState !== 1
-      ) {
-        console.warn('机器人未在线，Code:', loginStatusData.Code, 'loginState:', loginStatusData.Data?.loginState);
-        throw new Error('机器人未在线');
+      console.log('【GetLoginStatus 返回】', loginStatusData);
+      if (loginStatusData.Code !== 200) {
+        setError(loginStatusData.Text || '获取登录状态失败');
+        setIsLoading(false);
+        return;
       }
-
+      const loginStatus = loginStatusData.Data;
+      if (!loginStatus || loginStatus.loginState !== 1) {
+        setError('机器人不在线，请确保已在其他设备登录');
+        setIsLoading(false);
+        return;
+      }
+      // 2. 获取资料
       const profileResponse = await fetch(`${API_BASE_URL}/user/GetProfile?key=` + innerAuthKey);
       const profileData = await profileResponse.json();
-      console.log('机器人资料API返回:', profileData);
+      console.log('【GetProfile（扫码后）返回】', profileData);
       if (profileData.Code !== 200) {
-        throw new Error('获取机器人资料失败');
+        setError(profileData.Text || '获取用户资料失败');
+        setIsLoading(false);
+        return;
       }
-
+      if (!profileData.Data?.userInfo || !profileData.Data?.userInfoExt) {
+        setError('获取用户资料失败');
+        setIsLoading(false);
+        return;
+      }
+      // 3. 获取 session
       const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user?.id) {
+        setError('未登录或会话已过期');
+        setIsLoading(false);
+        return;
+      }
+      // 4. 插入 bots 表（插入前先查）
+      const { data: existBot } = await supabase
+        .from('bots')
+        .select('*')
+        .eq('auth_key', innerAuthKey)
+        .single();
+      if (existBot) {
+        if (pollingTimeoutRef.current) clearInterval(pollingTimeoutRef.current);
+        setIsPolling(false);
+        onSuccess();
+        onClose();
+        return;
+      }
       const { data: bot, error: createError } = await supabase
         .from('bots')
-        .insert([{
+        .insert({
           auth_key: innerAuthKey,
-          wxid: checkScanData.Data.wxid,
+          status: 'online',
+          wxid: profileData.Data.userInfo.userName.str,
           nickname: profileData.Data.userInfo.nickName.str,
           avatar_url: profileData.Data.userInfoExt.bigHeadImgUrl,
-          status: 'online',
-          created_at: new Date().toISOString(),
-          user_id: session?.user?.id || null
-        }])
+          user_id: session.user.id,
+          last_active_at: new Date().toISOString()
+        })
         .select()
         .single();
-
       if (createError) {
-        throw new Error('保存机器人信息失败: ' + createError.message);
+        setError('保存机器人信息失败');
+        setIsLoading(false);
+        return;
       }
-
-      if (pollingTimeout) clearInterval(pollingTimeout);
-      setPolling(false);
+      if (pollingTimeoutRef.current) clearInterval(pollingTimeoutRef.current);
+      setIsPolling(false);
       onSuccess();
       onClose();
+      return;
     } catch (error) {
+      console.error('【扫码确认异常】', error);
       setError(error instanceof Error ? error.message : '确认登录失败');
       setIsLoading(false);
     }
+  };
+
+  // 优化后的扫码确认逻辑
+  const handleConfirmScan = async (fromPolling = false) => {
+    // 50秒后用户手动点"已确认扫码"时，直接查GetProfile
+    await handleGetProfile();
   };
 
   return (
@@ -229,13 +257,13 @@ const QrCodeLoginModal: React.FC<QrCodeLoginModalProps> = ({ onClose, onSuccess,
           <div className="text-center py-8">
             <img src={qrCodeUrl} alt="登录二维码" className="mx-auto mb-4" />
             <p className="text-gray-600 mb-4">{status}</p>
-            {isScanning && (
+            {showConfirmButton && (
               <button
                 onClick={() => handleConfirmScan(false)}
                 className="flex items-center justify-center px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 mx-auto"
               >
                 <Check className="mr-2" size={18} />
-                已扫码确认
+                已确认扫码
               </button>
             )}
           </div>

@@ -8,6 +8,7 @@ import type { UploadFile } from 'antd/es/upload/interface';
 import { Bot } from '../types';
 import { useAuth } from '../context/AuthContext';
 import { Bot as BotIcon } from 'lucide-react';
+import imageCompression from 'browser-image-compression';
 
 interface Moment {
   id: string;
@@ -24,9 +25,34 @@ interface CustomUploadFile extends UploadFile {
   width?: number;
   height?: number;
   thumbUrl?: string;
+  isAI?: boolean;
 }
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+
+// 辅助函数：dataUrl转File
+function dataUrlToFile(dataUrl: string, filename: string): File {
+  const arr = dataUrl.split(',');
+  const mimeMatch = arr[0].match(/:(.*?);/);
+  const mime = mimeMatch ? mimeMatch[1] : 'image/png';
+  const bstr = atob(arr[1]);
+  let n = bstr.length;
+  const u8arr = new Uint8Array(n);
+  while (n--) {
+    u8arr[n] = bstr.charCodeAt(n);
+  }
+  return new File([u8arr], filename, { type: mime });
+}
+
+// 辅助函数：File转base64
+function fileToBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = reject;
+  });
+}
 
 const MomentsPage: React.FC = () => {
   const [moments, setMoments] = useState<Moment[]>([]);
@@ -47,9 +73,8 @@ const MomentsPage: React.FC = () => {
   const [selectedBotId, setSelectedBotId] = useState<string | undefined>();
   const { user } = useAuth();
 
-  // 新增：只保留在线机器人
-  const onlineBots = bots.filter(b => b.status === 'online');
-  const selectedBot = onlineBots.find(b => b.id === selectedBotId);
+  // 下拉选项用所有机器人，selectedBot也从所有bots查找
+  const selectedBot = bots.find(b => b.id === selectedBotId);
 
   useEffect(() => {
     loadMoments();
@@ -200,49 +225,57 @@ const MomentsPage: React.FC = () => {
         message.error('请先配置AI服务');
         return;
       }
-
       if (!aiPrompt) {
         message.error('请输入创意提示词');
         return;
       }
-
       setGeneratingImage(true);
-      console.log('AI生成图片 prompt:', aiPrompt);
       const hide = message.loading('正在生成图片...');
 
-      const imageData = await generateImage(aiConfig, aiPrompt);
-      
-      // 获取当前用户的在线机器人
+      const imageData = await generateImage(aiConfig, aiPrompt); // base64
+
       if (!selectedBot || selectedBot.status !== 'online') {
         message.error('请先让机器人上线');
+        hide();
         return;
       }
 
-      // 上传图片到朋友圈
-      const response = await uploadFriendCircleImage(selectedBot.auth_key, imageData);
-      
-      if (response.Code === 200 && response.Data?.[0]?.resp) {
-        const imageData = response.Data[0].resp;
+      // base64转File
+      const aiFile = dataUrlToFile(imageData, `ai-${Date.now()}.png`);
+      // 再次压缩，最大0.5MB
+      const compressed = await imageCompression(aiFile, {
+        maxSizeMB: 0.5,
+        maxWidthOrHeight: 512,
+        useWebWorker: true
+      });
+      // 压缩后转base64
+      const compressedBase64 = await fileToBase64(compressed);
+
+      // 上传压缩后的base64
+      const response = await uploadFriendCircleImage(selectedBot.auth_key, compressedBase64);
+      if (response.Code === 200) {
+        const imageInfo = response.Data[0];
         const newFile: CustomUploadFile = {
           uid: `ai-${Date.now()}`,
-          name: 'AI生成图片',
+          name: `AI生成图片-${Date.now()}`,
           status: 'done',
-          url: imageData.FileURL,
-          thumbUrl: imageData.ThumbURL,
-          md5: imageData.ImageMD5,
-          width: imageData.ImageWidth,
-          height: imageData.ImageHeight,
-          response: imageData // 保存完整的响应数据
+          url: imageInfo.resp.FileURL,
+          thumbUrl: imageInfo.resp.ThumbURL,
+          md5: imageInfo.resp.ImageMD5,
+          width: imageInfo.resp.ImageWidth,
+          height: imageInfo.resp.ImageHeight,
+          response: imageInfo.resp,
+          isAI: true
         };
         setFileList(prev => [...prev, newFile]);
         hide();
         message.success('生成图片成功');
       } else {
-        throw new Error(response.Text || '上传图片失败');
+        hide();
+        throw new Error(response.Text || '上传AI图片失败');
       }
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : '生成图片失败';
-      message.error(errorMessage);
+      message.error(error instanceof Error ? error.message : '生成图片失败');
       console.error('Error generating AI image:', error);
     } finally {
       setGeneratingImage(false);
@@ -255,7 +288,7 @@ const MomentsPage: React.FC = () => {
       message.error('只能上传图片文件！');
       return Upload.LIST_IGNORE;
     }
-    const isLt2M = file.size / 1024 / 1024 < 2;
+    const isLt2M = file.size / 512 / 512 < 2;
     if (!isLt2M) {
       message.error('图片大小不能超过 2MB！');
       return Upload.LIST_IGNORE;
@@ -266,8 +299,14 @@ const MomentsPage: React.FC = () => {
   const handleUpload = async (file: File) => {
     try {
       setUploading(true);
+      // 压缩图片，最大0.5MB，最大宽高1024px
+      const compressedFile = await imageCompression(file, {
+        maxSizeMB: 0.5,
+        maxWidthOrHeight: 512,
+        useWebWorker: true
+      });
       const reader = new FileReader();
-      reader.readAsDataURL(file);
+      reader.readAsDataURL(compressedFile);
       reader.onload = async () => {
         const base64Data = reader.result as string;
         
@@ -310,17 +349,14 @@ const MomentsPage: React.FC = () => {
     try {
       const values = await form.validateFields();
       const { content } = values;
-      
       // 获取当前用户的在线机器人
       if (!selectedBot || selectedBot.status !== 'online') {
         message.error('请先让机器人上线');
         return;
       }
-
       if (postType === 'text') {
         // 发送纯文本朋友圈
         const response = await sendFriendCircle(selectedBot.auth_key, content);
-        
         if (response.Code === 200) {
           // 保存到数据库
           const { error: dbError } = await supabase
@@ -333,9 +369,7 @@ const MomentsPage: React.FC = () => {
               user_id: selectedBot.user_id,
               bot_id: selectedBot.id
             }]);
-
           if (dbError) throw dbError;
-          
           message.success('发送朋友圈成功');
           setModalVisible(false);
           loadMoments();
@@ -345,28 +379,22 @@ const MomentsPage: React.FC = () => {
       } else {
         // 发送图文朋友圈
         if (fileList.length === 0) {
-          throw new Error('请至少上传一张图片');
+          message.error('请至少上传一张图片');
+          return;
         }
-
-        // 上传图片到朋友圈
-        let imageUrls = [];
+        // 上传图片到朋友圈（AI图片和普通图片都已上传，直接取url）
+        let imageUrls: string[] = [];
         for (const file of fileList) {
-          if (file.uid.startsWith('ai-')) {
-            // AI生成的图片
-            const imageData = file.response;
-            if (!imageData) {
-              throw new Error('图片数据无效');
-            }
-            imageUrls.push(imageData.FileURL);
-          } else {
-            // 普通图片
-            if (!file.response) {
-              throw new Error('图片数据无效');
-            }
+          if (file.response && file.response.FileURL) {
+            // 已上传图片
             imageUrls.push(file.response.FileURL);
+          } else if (file.url && file.url.startsWith('http')) {
+            // 网络图片（兜底）
+            imageUrls.push(file.url);
+          } else {
+            throw new Error('图片数据无效');
           }
         }
-
         const mediaList = imageUrls.map((url, index) => ({
           ThumType: "1",
           Thumb: url,
@@ -388,7 +416,6 @@ const MomentsPage: React.FC = () => {
           SubType: 0,
           Private: 0
         }));
-
         const response = await fetch(`${API_BASE_URL}/sns/SendFriendCircle?key=${selectedBot.auth_key}`, {
           method: 'POST',
           headers: {
@@ -402,9 +429,7 @@ const MomentsPage: React.FC = () => {
             Content: content || ""
           })
         });
-
         const data = await response.json();
-        
         if (data.Code === 200) {
           // 保存到数据库
           const { error: dbError } = await supabase
@@ -418,9 +443,7 @@ const MomentsPage: React.FC = () => {
               user_id: selectedBot.user_id,
               bot_id: selectedBot.id
             }]);
-
           if (dbError) throw dbError;
-          
           message.success('发送朋友圈成功');
           setModalVisible(false);
           loadMoments();
@@ -531,7 +554,7 @@ const MomentsPage: React.FC = () => {
               style={{ width: 220, marginLeft: 24 }}
               placeholder="请选择机器人"
             >
-              {onlineBots.map(bot => (
+              {bots.map(bot => (
                 <Select.Option key={bot.id} value={bot.id}>
                   {(bot.nickname || bot.wxid || bot.id.slice(0, 8)) + `（${bot.status === 'online' ? '在线' : '离线'}）`}
                 </Select.Option>
@@ -603,9 +626,10 @@ const MomentsPage: React.FC = () => {
           </Form.Item>
           {postType === 'image' && (
             <Form.Item
-              name="images"
               label="上传图片"
-              rules={[{ required: true, message: '请至少上传一张图片' }]}
+              required
+              validateStatus={fileList.length === 0 ? 'error' : ''}
+              help={fileList.length === 0 ? '请至少上传一张图片' : ''}
             >
               <Upload
                 fileList={fileList}
@@ -613,6 +637,7 @@ const MomentsPage: React.FC = () => {
                 customRequest={({ file }) => handleUpload(file as File)}
                 listType="picture-card"
                 maxCount={9}
+                onRemove={file => setFileList(prev => prev.filter(f => f.uid !== file.uid))}
               >
                 {fileList.length >= 9 ? null : (
                   <div>

@@ -39,6 +39,8 @@ const FriendsPage: React.FC = () => {
   const searchInput = React.useRef<InputRef>(null);
   const [bots, setBots] = useState<Bot[]>([]);
   const [selectedBotId, setSelectedBotId] = useState<string | undefined>();
+  const [avatarModalVisible, setAvatarModalVisible] = useState(false);
+  const [avatarModalUrl, setAvatarModalUrl] = useState<string | null>(null);
 
   useEffect(() => {
     loadFriends();
@@ -279,7 +281,12 @@ const FriendsPage: React.FC = () => {
       dataIndex: 'avatar_url',
       key: 'avatar_url',
       render: (url: string) => (
-        <Avatar src={url} size="large" />
+        <>
+          <Avatar src={url} size="large" style={{ cursor: 'pointer' }} onClick={() => {
+            setAvatarModalUrl(url);
+            setAvatarModalVisible(true);
+          }} />
+        </>
       ),
     },
     {
@@ -353,6 +360,40 @@ const FriendsPage: React.FC = () => {
       ),
     },
   ];
+
+  // 屏蔽部分开发环境下的无关警告和提示（包含console.warn/log/error/info）
+  if (import.meta.env.MODE === 'development') {
+    const rawWarn = console.warn;
+    const rawLog = console.log;
+    const rawError = console.error;
+    const rawInfo = console.info;
+    const filterKeywords = [
+      'React Router Future Flag Warning',
+      'bodyStyle is deprecated',
+      '[antd: Modal]',
+      'Download the React DevTools',
+      '[antd: Table] `onFilterDropdownVisibleChange` is deprecated'
+    ];
+    function shouldFilter(args: unknown[]): boolean {
+      return typeof args[0] === 'string' && filterKeywords.some(k => (args[0] as string).includes(k));
+    }
+    console.warn = function (...args: unknown[]) {
+      if (shouldFilter(args)) return;
+      rawWarn.apply(console, args);
+    };
+    console.log = function (...args: unknown[]) {
+      if (shouldFilter(args)) return;
+      rawLog.apply(console, args);
+    };
+    console.error = function (...args: unknown[]) {
+      if (shouldFilter(args)) return;
+      rawError.apply(console, args);
+    };
+    console.info = function (...args: unknown[]) {
+      if (shouldFilter(args)) return;
+      rawInfo.apply(console, args);
+    };
+  }
 
   return (
     <div>
@@ -438,6 +479,18 @@ const FriendsPage: React.FC = () => {
             </Select>
           </Form.Item>
         </Form>
+      </Modal>
+
+      <Modal
+        open={avatarModalVisible}
+        footer={null}
+        onCancel={() => setAvatarModalVisible(false)}
+        centered
+        styles={{ body: { textAlign: 'center', padding: 24 } }}
+      >
+        {avatarModalUrl && (
+          <img src={avatarModalUrl} alt="好友头像大图" style={{ maxWidth: '100%', maxHeight: '60vh', borderRadius: 12 }} />
+        )}
       </Modal>
     </div>
   );
