@@ -10,13 +10,21 @@ import { supabase } from '../lib/supabase';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
+// 代理地区配置，可手动编辑
+const REGION_PROXIES = [
+  { label: '北京(默认)', value: 'beijing', proxy: '' }, // 默认
+  { label: '河南', value: 'henan', proxy: 'socks5://GP0X6IG93S:91563817@106.42.31.35:13519' },
+  // 可继续添加更多地区
+];
+
 interface QrCodeLoginModalProps {
   onClose: () => void;
   onSuccess: () => void;
   authKey?: string;
+  regionProxy?: string;
 }
 
-const QrCodeLoginModal: React.FC<QrCodeLoginModalProps> = ({ onClose, onSuccess, authKey }) => {
+const QrCodeLoginModal: React.FC<QrCodeLoginModalProps> = ({ onClose, onSuccess, authKey, regionProxy }) => {
   const [qrCodeUrl, setQrCodeUrl] = useState<string>('');
   const [innerAuthKey, setInnerAuthKey] = useState<string>(authKey || '');
   const [status, setStatus] = useState<string>('正在生成授权码...');
@@ -77,7 +85,7 @@ const QrCodeLoginModal: React.FC<QrCodeLoginModalProps> = ({ onClose, onSuccess,
         },
         body: JSON.stringify({
           Check: false,
-          Proxy: ''
+          Proxy: regionProxy || '' // 这里根据地区传递代理
         })
       });
       const qrData = await qrResponse.json();
@@ -245,6 +253,8 @@ const BotsPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [loginBotKey, setLoginBotKey] = useState<string | null>(null);
+  const [region, setRegion] = useState(REGION_PROXIES[0].value); // 默认北京
+  const [showRegionSelect, setShowRegionSelect] = useState(false);
 
   useEffect(() => {
     fetchBots();
@@ -349,7 +359,7 @@ const BotsPage: React.FC = () => {
             导入机器人
           </button>
           <button
-            onClick={() => setShowCreateModal(true)}
+            onClick={() => setShowRegionSelect(true)}
             disabled={isCreatingBot}
             className={`px-5 py-2 bg-gradient-to-r from-blue-600 to-purple-500 text-white rounded-xl font-bold shadow hover:scale-105 hover:shadow-xl transition-all text-base flex items-center gap-2 ${isCreatingBot ? 'opacity-70 cursor-not-allowed' : ''}`}
           >
@@ -394,7 +404,7 @@ const BotsPage: React.FC = () => {
           <p className="text-gray-600 mb-4">还没有机器人，立即创建或导入一个吧！</p>
           <div className="flex justify-center space-x-4">
             <button
-              onClick={() => setShowCreateModal(true)}
+              onClick={() => setShowRegionSelect(true)}
               className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
             >
               <Plus size={18} className="mr-2" />
@@ -444,6 +454,37 @@ const BotsPage: React.FC = () => {
         </div>
       )}
 
+      {showRegionSelect && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl max-w-xs w-full p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-medium">选择地区</h3>
+              <button onClick={() => setShowRegionSelect(false)} className="text-gray-400 hover:text-gray-600">&times;</button>
+            </div>
+            <div className="mb-4">
+              <select
+                className="w-full border rounded px-3 py-2"
+                value={region}
+                onChange={e => setRegion(e.target.value)}
+              >
+                {REGION_PROXIES.map(r => (
+                  <option key={r.value} value={r.value}>{r.label}</option>
+                ))}
+              </select>
+            </div>
+            <button
+              className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700"
+              onClick={() => {
+                setShowRegionSelect(false);
+                setShowCreateModal(true);
+              }}
+            >
+              确定
+            </button>
+          </div>
+        </div>
+      )}
+
       {showCreateModal && (
         <QrCodeLoginModal
           onClose={() => {
@@ -452,6 +493,7 @@ const BotsPage: React.FC = () => {
           }}
           onSuccess={fetchBots}
           authKey={loginBotKey || undefined}
+          regionProxy={REGION_PROXIES.find(r => r.value === region)?.proxy || ''}
         />
       )}
     </div>
