@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { LogIn, UserPlus, Eye, EyeOff, Mail, Lock, User, Shield } from 'lucide-react';
+import { LogIn, UserPlus, Eye, EyeOff, Mail, Lock, Shield } from 'lucide-react';
 import { Modal } from 'antd';
 import { supabase } from '../../lib/supabase';
 
@@ -44,22 +44,19 @@ const LoginForm: React.FC = () => {
     generateCaptcha();
   };
 
-  // 切换模式 - 优化动画效果
+  // 切换模式
   const toggleMode = () => {
-    // 清除错误和成功消息
     setError('');
     setSuccess('');
-    
-    // 平滑切换
     setIsRegisterMode(!isRegisterMode);
-    
-    // 延迟重置表单，避免闪烁
-    setTimeout(() => {
-      resetForm();
-    }, 100);
+    // 保留邮箱，清空密码
+    setPassword('');
+    setConfirmPassword('');
+    setCaptchaInput('');
+    generateCaptcha();
   };
 
-  // 注册处理 - 完善Supabase联动
+  // 注册处理
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -132,7 +129,8 @@ const LoginForm: React.FC = () => {
           setSuccess('注册成功！请检查您的邮箱并点击验证链接完成注册。');
           setTimeout(() => {
             setIsRegisterMode(false);
-            resetForm();
+            setPassword('');
+            setConfirmPassword('');
           }, 3000);
         }
       }
@@ -144,7 +142,6 @@ const LoginForm: React.FC = () => {
         setError('该邮箱已被注册，请直接登录');
         setTimeout(() => {
           setIsRegisterMode(false);
-          setEmail(email); // 保留邮箱
           setPassword('');
           setConfirmPassword('');
         }, 2000);
@@ -200,11 +197,12 @@ const LoginForm: React.FC = () => {
 
   return (
     <>
-      <div className="mb-6 text-center">
-        <div className="relative flex justify-center space-x-1 bg-gray-50 rounded-xl p-1 shadow-inner">
+      {/* 顶部切换按钮 */}
+      <div className="mb-6">
+        <div className="relative flex bg-gray-100 rounded-xl p-1">
           {/* 滑动背景 */}
           <div 
-            className={`absolute top-1 bottom-1 w-1/2 bg-white rounded-lg shadow-sm transition-all duration-300 ease-in-out ${
+            className={`absolute top-1 bottom-1 w-1/2 bg-white rounded-lg shadow-sm transition-transform duration-300 ease-out ${
               isRegisterMode ? 'translate-x-full' : 'translate-x-0'
             }`}
           />
@@ -213,42 +211,41 @@ const LoginForm: React.FC = () => {
           <button
             type="button"
             onClick={() => isRegisterMode && toggleMode()}
-            className={`relative z-10 flex-1 py-2.5 px-4 rounded-lg text-sm font-medium transition-all duration-300 ease-in-out ${
+            className={`relative z-10 flex-1 py-3 text-center text-sm font-semibold transition-colors duration-300 ${
               !isRegisterMode 
                 ? 'text-blue-600' 
                 : 'text-gray-500 hover:text-gray-700'
             }`}
           >
-            登录
+            登录账号
           </button>
           
           {/* 注册按钮 */}
           <button
             type="button"
             onClick={() => !isRegisterMode && toggleMode()}
-            className={`relative z-10 flex-1 py-2.5 px-4 rounded-lg text-sm font-medium transition-all duration-300 ease-in-out ${
+            className={`relative z-10 flex-1 py-3 text-center text-sm font-semibold transition-colors duration-300 ${
               isRegisterMode 
                 ? 'text-blue-600' 
                 : 'text-gray-500 hover:text-gray-700'
             }`}
           >
-            注册
+            注册账号
           </button>
         </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form onSubmit={handleSubmit} className="space-y-5">
         {/* 邮箱输入框 */}
         <div className="relative">
           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
             <Mail size={18} className="text-gray-400" />
           </div>
           <input
-            id="email"
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="w-full pl-10 pr-3 py-2.5 rounded-lg border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 text-gray-800 bg-white placeholder-gray-400 text-sm shadow-sm hover:border-gray-300"
+            className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-gray-900 placeholder-gray-500"
             placeholder="请输入邮箱地址"
             required
           />
@@ -260,70 +257,59 @@ const LoginForm: React.FC = () => {
             <Lock size={18} className="text-gray-400" />
           </div>
           <input
-            id="password"
             type={showPassword ? 'text' : 'password'}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="w-full pl-10 pr-10 py-2.5 rounded-lg border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 text-gray-800 bg-white placeholder-gray-400 text-sm shadow-sm hover:border-gray-300"
+            className="w-full pl-10 pr-12 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-gray-900 placeholder-gray-500"
             placeholder={isRegisterMode ? "请设置密码（至少6位）" : "请输入密码"}
             required
           />
           <button
             type="button"
             onClick={() => setShowPassword(!showPassword)}
-            className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 transition-colors"
+            className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
           >
             {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
           </button>
         </div>
 
         {/* 确认密码输入框（仅注册模式显示） */}
-        <div className={`transition-all duration-300 ease-in-out overflow-hidden ${
-          isRegisterMode ? 'max-h-20 opacity-100' : 'max-h-0 opacity-0'
-        }`}>
+        {isRegisterMode && (
           <div className="relative">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
               <Shield size={18} className="text-gray-400" />
             </div>
             <input
-              id="confirmPassword"
               type={showConfirmPassword ? 'text' : 'password'}
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
-              className="w-full pl-10 pr-10 py-2.5 rounded-lg border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 text-gray-800 bg-white placeholder-gray-400 text-sm shadow-sm hover:border-gray-300"
+              className="w-full pl-10 pr-12 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-gray-900 placeholder-gray-500"
               placeholder="请再次输入密码"
-              required={isRegisterMode}
+              required
             />
             <button
               type="button"
               onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-              className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 transition-colors"
+              className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
             >
               {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
             </button>
           </div>
-        </div>
+        )}
 
         {/* 验证码输入框 */}
-        <div className="flex items-center gap-2">
-          <div className="flex-1 relative">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <User size={18} className="text-gray-400" />
-            </div>
-            <input
-              id="captcha"
-              type="text"
-              value={captchaInput}
-              onChange={(e) => setCaptchaInput(e.target.value)}
-              className="w-full pl-10 pr-3 py-2.5 rounded-lg border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 text-gray-800 bg-white placeholder-gray-400 text-sm shadow-sm hover:border-gray-300"
-              placeholder="请输入验证码"
-              maxLength={4}
-              inputMode="numeric"
-              required
-            />
-          </div>
+        <div className="flex gap-3">
+          <input
+            type="text"
+            value={captchaInput}
+            onChange={(e) => setCaptchaInput(e.target.value)}
+            className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-gray-900 placeholder-gray-500"
+            placeholder="请输入验证码"
+            maxLength={4}
+            required
+          />
           <div 
-            className="px-4 py-2.5 rounded-lg bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 text-blue-700 font-mono text-base tracking-widest select-none cursor-pointer hover:from-blue-100 hover:to-indigo-100 transition-all duration-200 shadow-sm hover:shadow-md" 
+            className="px-4 py-3 bg-blue-50 border border-blue-200 rounded-lg text-blue-700 font-mono text-lg tracking-widest select-none cursor-pointer hover:bg-blue-100 transition-colors min-w-[80px] text-center" 
             onClick={generateCaptcha} 
             title="点击刷新验证码"
           >
@@ -332,45 +318,40 @@ const LoginForm: React.FC = () => {
         </div>
 
         {/* 协议勾选 */}
-        <div className="flex items-center justify-between">
-          <label className="flex items-center text-xs cursor-pointer">
-            <input 
-              type="checkbox" 
-              checked={checked} 
-              onChange={e => setChecked(e.target.checked)} 
-              className="mr-2 w-3.5 h-3.5 text-blue-600 border border-gray-300 rounded focus:ring-blue-500 focus:ring-1" 
-            />
-            <span className="text-gray-600">我已阅读并同意</span>
-            <span className="text-blue-600 hover:text-blue-800 cursor-pointer ml-1 font-medium" onClick={() => setShowAgreement(true)}>服务协议</span>
-            <span className="text-gray-600 mx-1">和</span>
-            <span className="text-blue-600 hover:text-blue-800 cursor-pointer font-medium" onClick={() => setShowAgreement(true)}>隐私政策</span>
+        <div className="flex items-start">
+          <input 
+            type="checkbox" 
+            checked={checked} 
+            onChange={e => setChecked(e.target.checked)} 
+            className="mt-1 w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500" 
+          />
+          <label className="ml-2 text-sm text-gray-600 leading-relaxed">
+            我已阅读并同意
+            <span className="text-blue-600 hover:text-blue-800 cursor-pointer mx-1" onClick={() => setShowAgreement(true)}>《服务协议》</span>
+            和
+            <span className="text-blue-600 hover:text-blue-800 cursor-pointer ml-1" onClick={() => setShowAgreement(true)}>《隐私政策》</span>
           </label>
         </div>
 
-        {/* 错误和成功提示 */}
-        <div className={`transition-all duration-300 ease-in-out overflow-hidden ${
-          error ? 'max-h-20 opacity-100' : 'max-h-0 opacity-0'
-        }`}>
-          <div className="p-2.5 bg-red-50 border border-red-200 text-red-700 rounded-lg text-xs flex items-center shadow-sm">
-            <div className="w-1.5 h-1.5 bg-red-500 rounded-full mr-2 flex-shrink-0"></div>
+        {/* 错误提示 */}
+        {error && (
+          <div className="p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">
             {error}
           </div>
-        </div>
+        )}
 
-        <div className={`transition-all duration-300 ease-in-out overflow-hidden ${
-          success ? 'max-h-20 opacity-100' : 'max-h-0 opacity-0'
-        }`}>
-          <div className="p-2.5 bg-green-50 border border-green-200 text-green-700 rounded-lg text-xs flex items-center shadow-sm">
-            <div className="w-1.5 h-1.5 bg-green-500 rounded-full mr-2 flex-shrink-0"></div>
+        {/* 成功提示 */}
+        {success && (
+          <div className="p-3 bg-green-50 border border-green-200 text-green-700 rounded-lg text-sm">
             {success}
           </div>
-        </div>
+        )}
 
         {/* 提交按钮 */}
         <button
           type="submit"
           disabled={loading}
-          className={`w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-bold py-2.5 px-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-200 flex items-center justify-center transition-all duration-200 hover:scale-[1.01] shadow-md hover:shadow-lg text-sm ${loading ? 'opacity-70 cursor-not-allowed' : ''}`}
+          className={`w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold py-3 px-4 rounded-lg transition-all duration-200 flex items-center justify-center ${loading ? 'opacity-70 cursor-not-allowed' : 'hover:shadow-lg'}`}
         >
           {loading ? (
             <span className="flex items-center">
@@ -396,20 +377,6 @@ const LoginForm: React.FC = () => {
             </span>
           )}
         </button>
-
-        {/* 切换模式提示 */}
-        <div className="text-center pt-3">
-          <span className="text-gray-500 text-xs">
-            {isRegisterMode ? '已有账号？' : '还没有账号？'}
-          </span>
-          <button
-            type="button"
-            onClick={toggleMode}
-            className="ml-1 text-blue-600 hover:text-blue-800 font-medium text-xs transition-colors"
-          >
-            {isRegisterMode ? '立即登录' : '立即注册'}
-          </button>
-        </div>
       </form>
 
       {/* 协议弹窗 */}
@@ -420,16 +387,16 @@ const LoginForm: React.FC = () => {
         title="服务协议与隐私政策"
         width={600}
       >
-        <div className="max-h-96 overflow-y-auto p-2 text-gray-700 text-sm">
-          <h3 className="font-bold mb-2">服务协议</h3>
-          <p className="mb-4">
+        <div className="max-h-96 overflow-y-auto p-4 text-gray-700 text-sm">
+          <h3 className="font-bold mb-3 text-gray-900">服务协议</h3>
+          <p className="mb-4 leading-relaxed">
             本项目 <a href="https://github.com/kilimro/bot_web" target="_blank" className="text-blue-600 underline">kilimro/bot_web</a> 为开源项目，仅供学习与技术交流使用。<br/>
             严禁将本项目用于任何商业用途，包括但不限于以本项目为基础进行产品开发、销售、运营等。<br/>
             如因违反本协议造成的任何法律责任，均由使用者自行承担，项目作者不承担任何责任。<br/>
             如需商用或二次开发，请联系作者并获得书面授权。
           </p>
-          <h3 className="font-bold mt-4 mb-2">隐私政策</h3>
-          <p>
+          <h3 className="font-bold mt-6 mb-3 text-gray-900">隐私政策</h3>
+          <p className="leading-relaxed">
             本项目本身不收集、存储或上传任何用户的个人信息。<br/>
             如因自行部署或二次开发涉及用户数据采集、存储、传输等行为，请严格遵守相关法律法规，并自行承担相应责任。<br/>
             项目作者不对任何第三方使用本项目产生的数据安全或隐私问题负责。
