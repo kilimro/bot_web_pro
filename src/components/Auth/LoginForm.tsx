@@ -39,16 +39,27 @@ const LoginForm: React.FC = () => {
     setCaptchaInput('');
     setError('');
     setSuccess('');
+    setShowPassword(false);
+    setShowConfirmPassword(false);
     generateCaptcha();
   };
 
-  // 切换模式
+  // 切换模式 - 优化动画效果
   const toggleMode = () => {
+    // 清除错误和成功消息
+    setError('');
+    setSuccess('');
+    
+    // 平滑切换
     setIsRegisterMode(!isRegisterMode);
-    resetForm();
+    
+    // 延迟重置表单，避免闪烁
+    setTimeout(() => {
+      resetForm();
+    }, 100);
   };
 
-  // 注册处理
+  // 注册处理 - 完善Supabase联动
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -83,33 +94,66 @@ const LoginForm: React.FC = () => {
       setError('');
       setSuccess('');
 
+      // 使用Supabase注册
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
-          emailRedirectTo: `${window.location.origin}/dashboard`
+          emailRedirectTo: `${window.location.origin}/dashboard`,
+          data: {
+            email: email,
+            created_at: new Date().toISOString()
+          }
         }
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase registration error:', error);
+        throw error;
+      }
 
       if (data.user) {
-        setSuccess('注册成功！正在为您登录...');
-        // 注册成功后自动登录
-        setTimeout(async () => {
-          try {
-            await login(email, password);
-            navigate('/dashboard');
-          } catch (loginError) {
-            setError('注册成功但自动登录失败，请手动登录');
+        // 检查是否需要邮箱验证
+        if (data.user.email_confirmed_at) {
+          // 邮箱已确认，直接登录
+          setSuccess('注册成功！正在为您登录...');
+          setTimeout(async () => {
+            try {
+              await login(email, password);
+              navigate('/dashboard');
+            } catch (loginError) {
+              console.error('Auto login error:', loginError);
+              setError('注册成功但自动登录失败，请手动登录');
+              setIsRegisterMode(false);
+            }
+          }, 1500);
+        } else {
+          // 需要邮箱验证
+          setSuccess('注册成功！请检查您的邮箱并点击验证链接完成注册。');
+          setTimeout(() => {
             setIsRegisterMode(false);
-          }
-        }, 1500);
+            resetForm();
+          }, 3000);
+        }
       }
     } catch (err: any) {
       console.error('Registration error:', err);
-      if (err.message?.includes('already registered')) {
+      
+      // 处理各种错误情况
+      if (err.message?.includes('User already registered')) {
         setError('该邮箱已被注册，请直接登录');
+        setTimeout(() => {
+          setIsRegisterMode(false);
+          setEmail(email); // 保留邮箱
+          setPassword('');
+          setConfirmPassword('');
+        }, 2000);
+      } else if (err.message?.includes('Invalid email')) {
+        setError('邮箱格式不正确，请检查后重试');
+      } else if (err.message?.includes('Password should be at least')) {
+        setError('密码长度至少6位');
+      } else if (err.message?.includes('signup is disabled')) {
+        setError('注册功能暂时关闭，请联系管理员');
       } else {
         setError(err.message || '注册失败，请稍后重试');
       }
@@ -156,25 +200,35 @@ const LoginForm: React.FC = () => {
 
   return (
     <>
-      <div className="mb-4 text-center">
-        <div className="flex justify-center space-x-1 bg-gray-100 rounded-lg p-1">
+      <div className="mb-6 text-center">
+        <div className="relative flex justify-center space-x-1 bg-gray-50 rounded-xl p-1 shadow-inner">
+          {/* 滑动背景 */}
+          <div 
+            className={`absolute top-1 bottom-1 w-1/2 bg-white rounded-lg shadow-sm transition-all duration-300 ease-in-out ${
+              isRegisterMode ? 'translate-x-full' : 'translate-x-0'
+            }`}
+          />
+          
+          {/* 登录按钮 */}
           <button
             type="button"
-            onClick={() => !isRegisterMode && toggleMode()}
-            className={`flex-1 py-2 px-3 rounded-md text-sm font-medium transition-all duration-200 ${
+            onClick={() => isRegisterMode && toggleMode()}
+            className={`relative z-10 flex-1 py-2.5 px-4 rounded-lg text-sm font-medium transition-all duration-300 ease-in-out ${
               !isRegisterMode 
-                ? 'bg-white text-blue-600 shadow-sm' 
+                ? 'text-blue-600' 
                 : 'text-gray-500 hover:text-gray-700'
             }`}
           >
             登录
           </button>
+          
+          {/* 注册按钮 */}
           <button
             type="button"
-            onClick={() => isRegisterMode && toggleMode()}
-            className={`flex-1 py-2 px-3 rounded-md text-sm font-medium transition-all duration-200 ${
+            onClick={() => !isRegisterMode && toggleMode()}
+            className={`relative z-10 flex-1 py-2.5 px-4 rounded-lg text-sm font-medium transition-all duration-300 ease-in-out ${
               isRegisterMode 
-                ? 'bg-white text-blue-600 shadow-sm' 
+                ? 'text-blue-600' 
                 : 'text-gray-500 hover:text-gray-700'
             }`}
           >
@@ -224,7 +278,9 @@ const LoginForm: React.FC = () => {
         </div>
 
         {/* 确认密码输入框（仅注册模式显示） */}
-        {isRegisterMode && (
+        <div className={`transition-all duration-300 ease-in-out overflow-hidden ${
+          isRegisterMode ? 'max-h-20 opacity-100' : 'max-h-0 opacity-0'
+        }`}>
           <div className="relative">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
               <Shield size={18} className="text-gray-400" />
@@ -236,7 +292,7 @@ const LoginForm: React.FC = () => {
               onChange={(e) => setConfirmPassword(e.target.value)}
               className="w-full pl-10 pr-10 py-2.5 rounded-lg border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 text-gray-800 bg-white placeholder-gray-400 text-sm shadow-sm hover:border-gray-300"
               placeholder="请再次输入密码"
-              required
+              required={isRegisterMode}
             />
             <button
               type="button"
@@ -246,7 +302,7 @@ const LoginForm: React.FC = () => {
               {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
             </button>
           </div>
-        )}
+        </div>
 
         {/* 验证码输入框 */}
         <div className="flex items-center gap-2">
@@ -292,18 +348,23 @@ const LoginForm: React.FC = () => {
         </div>
 
         {/* 错误和成功提示 */}
-        {error && (
+        <div className={`transition-all duration-300 ease-in-out overflow-hidden ${
+          error ? 'max-h-20 opacity-100' : 'max-h-0 opacity-0'
+        }`}>
           <div className="p-2.5 bg-red-50 border border-red-200 text-red-700 rounded-lg text-xs flex items-center shadow-sm">
             <div className="w-1.5 h-1.5 bg-red-500 rounded-full mr-2 flex-shrink-0"></div>
             {error}
           </div>
-        )}
-        {success && (
+        </div>
+
+        <div className={`transition-all duration-300 ease-in-out overflow-hidden ${
+          success ? 'max-h-20 opacity-100' : 'max-h-0 opacity-0'
+        }`}>
           <div className="p-2.5 bg-green-50 border border-green-200 text-green-700 rounded-lg text-xs flex items-center shadow-sm">
             <div className="w-1.5 h-1.5 bg-green-500 rounded-full mr-2 flex-shrink-0"></div>
             {success}
           </div>
-        )}
+        </div>
 
         {/* 提交按钮 */}
         <button
