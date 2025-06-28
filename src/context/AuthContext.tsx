@@ -31,12 +31,20 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   useEffect(() => {
     const initAuth = async () => {
       try {
+        console.log('Initializing auth...');
+        
         // First check if we have a session in cookies
         const storedUser = Cookies.get('user');
         if (storedUser) {
-          const parsedUser = JSON.parse(storedUser);
-          setUser(parsedUser);
-          setIsAuthenticated(true);
+          try {
+            const parsedUser = JSON.parse(storedUser);
+            setUser(parsedUser);
+            setIsAuthenticated(true);
+            console.log('Restored user from cookies:', parsedUser.email);
+          } catch (e) {
+            console.error('Failed to parse stored user:', e);
+            Cookies.remove('user', { path: '/' });
+          }
         }
 
         // Then get the current session from Supabase
@@ -51,6 +59,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         }
 
         if (session?.user) {
+          console.log('Found active session for:', session.user.email);
           const userData: User = {
             id: session.user.id,
             email: session.user.email || '',
@@ -62,11 +71,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           // Update cookies with fresh session data
           Cookies.set('user', JSON.stringify(userData), { 
             expires: 30,
-            secure: true,
-            sameSite: 'strict',
+            secure: false, // 开发环境设为 false
+            sameSite: 'lax',
             path: '/'
           });
         } else {
+          console.log('No active session found');
           // No valid session found
           Cookies.remove('user', { path: '/' });
           setUser(null);
@@ -95,6 +105,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       }
 
       if (session?.user) {
+        console.log('User signed in:', session.user.email);
         const userData: User = {
           id: session.user.id,
           email: session.user.email || '',
@@ -106,8 +117,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         // Update cookies on session change
         Cookies.set('user', JSON.stringify(userData), { 
           expires: 30,
-          secure: true,
-          sameSite: 'strict',
+          secure: false, // 开发环境设为 false
+          sameSite: 'lax',
           path: '/'
         });
       } else {
@@ -124,6 +135,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const login = async (email: string, password: string): Promise<boolean> => {
     try {
+      console.log('Attempting login for:', email);
+      
       // First try to sign in with Supabase auth
       const { data: { session }, error: authError } = await supabase.auth.signInWithPassword({
         email,
@@ -132,12 +145,24 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       if (authError) {
         console.error('Supabase auth error:', authError);
-        throw new Error(authError.message);
+        
+        // 处理特定错误
+        if (authError.message.includes('Invalid login credentials')) {
+          throw new Error('邮箱或密码错误，请检查后重试');
+        } else if (authError.message.includes('Email not confirmed')) {
+          throw new Error('邮箱未验证，请检查邮箱并点击验证链接');
+        } else if (authError.message.includes('Too many requests')) {
+          throw new Error('登录尝试过于频繁，请稍后再试');
+        } else {
+          throw new Error(authError.message || '登录失败，请稍后重试');
+        }
       }
 
       if (!session?.user) {
-        throw new Error('No user session after login');
+        throw new Error('登录失败，未获取到用户信息');
       }
+
+      console.log('Login successful for:', session.user.email);
 
       // If successful, create user data
       const userData: User = {
@@ -152,8 +177,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       // Set cookies with proper options
       Cookies.set('user', JSON.stringify(userData), { 
         expires: 30,
-        secure: true,
-        sameSite: 'strict',
+        secure: false, // 开发环境设为 false
+        sameSite: 'lax',
         path: '/'
       });
       
@@ -166,6 +191,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const logout = async () => {
     try {
+      console.log('Logging out...');
       await supabase.auth.signOut();
       Cookies.remove('user', { path: '/' });
       setUser(null);
