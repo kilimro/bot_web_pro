@@ -33,7 +33,7 @@
     ```env
     SUPABASE_URL=你的Supabase项目URL
     SUPABASE_KEY=你的Supabase_anon_public_Key
-    SUPABASE_SERVICE_ROLE_KEY==你的SUPABASE_SERVICE_ROLE_KEY
+    SUPABASE_SERVICE_ROLE_KEY=你的SUPABASE_SERVICE_ROLE_KEY
     ```
 3.  **启动后端服务**:
     在 `/server` 目录下，运行：
@@ -50,21 +50,24 @@
     npm install
     ```
 2.  **配置环境变量**:
+    在根目录下的 `.env` 文件中配置以下变量（注意前端需要 VITE_ 前缀）：
     ```env
-    SUPABASE_URL=你的Supabase项目URL
-    SUPABASE_KEY=你的Supabase_anon_public_Key
-4.  **构建前端应用 (用于生产环境)**:
+    VITE_SUPABASE_URL=你的Supabase项目URL
+    VITE_SUPABASE_ANON_KEY=你的Supabase_anon_public_Key
+    ```
+3.  **构建前端应用 (用于生产环境)**:
     ```bash
     npm run build
     ```
     构建后的静态文件通常位于  `dist` 目录。
-5.  **启动前端开发服务**:
+4.  **启动前端开发服务**:
     ```bash
-    npm start
+    npm run dev
     ```
-    对于生产部署，你需要将步骤 4 中构建的静态文件部署到静态文件托管服务或配置 Nginx/Apache 等 Web 服务器指向该静态文件目录。
+    对于生产部署，你需要将步骤 3 中构建的静态文件部署到静态文件托管服务或配置 Nginx/Apache 等 Web 服务器指向该静态文件目录。
 
 ## 其他说明
 -   确保你已安装最新 Node.js 和 npm 
 -   后端依赖项在 `server/package.json` 中定义。
 -   Supabase 的免费套餐有使用限制，请根据项目需求评估是否需要升级或者自己私有化部署。
+-   **重要**: 前端环境变量必须以 `VITE_` 前缀开头才能在客户端代码中访问。
