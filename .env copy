@@ -1,0 +1,12 @@
+# Supabase Configuration
+VITE_SUPABASE_URL=YOUR_SUPABASE_PROJECT_URL
+VITE_SUPABASE_ANON_KEY=YOUR_SUPABASE_ANON_PUBLIC_KEY
+
+# API Configuration
+VITE_API_BASE_URL=http://localhost:3000
+VITE_WS_BASE_URL=ws://localhost:3000
+VITE_API_SERVER_URL=http://localhost:3031
+VITE_API_ADMIN_KEY=your_admin_key_here
+
+# App Configuration
+VITE_APP_NAME=BOT管理平台
