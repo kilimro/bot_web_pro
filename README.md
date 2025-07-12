@@ -1,7 +1,29 @@
 # bot_web
 
 ## 简介
-这是一个前后端分离的项目
+这是一个前后端分离的项目，支持本地部署和 Vercel 一键部署。
+
+## 快速部署到 Vercel
+
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/your-username/bot_web)
+
+### Vercel 部署步骤：
+
+1. 点击上方的 "Deploy with Vercel" 按钮
+2. 连接你的 GitHub 账户并导入项目
+3. 在环境变量设置中添加以下变量：
+   - `SUPABASE_URL`: 你的 Supabase 项目 URL
+   - `SUPABASE_ANON_KEY`: 你的 Supabase anon public key
+   - `SUPABASE_SERVICE_ROLE_KEY`: 你的 Supabase service role key
+   - `API_ADMIN_KEY`: 设置一个管理员密钥
+4. 点击 "Deploy" 开始部署
+5. 部署完成后，你的应用将在 `https://your-project.vercel.app` 可用
+
+### 注意事项：
+- Vercel 部署版本使用 serverless 函数模拟后端 API
+- WebSocket 功能在 Vercel 上有限制，建议生产环境使用独立服务器部署
+- 某些实时功能可能需要额外配置
+
 ## 部署文档
 ### 1. 注册 Supabase
 1.  访问 [Supabase 官网](https://supabase.io/)。
