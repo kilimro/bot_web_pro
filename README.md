@@ -8,7 +8,7 @@
 
 ### 方案一：Vercel 一键部署（推荐）
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/your-username/bot_web)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/kilimro/m_botweb)
 
 #### 1. 部署前端到 Vercel
 
