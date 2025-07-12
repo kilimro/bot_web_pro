@@ -7,6 +7,10 @@
       "config": {
         "distDir": "dist"
       }
+    },
+    {
+      "src": "api/**/*.js",
+      "use": "@vercel/node"
     }
   ],
   "routes": [
@@ -22,9 +26,9 @@
   "env": {
     "VITE_SUPABASE_URL": "@supabase_url",
     "VITE_SUPABASE_ANON_KEY": "@supabase_anon_key",
-    "VITE_API_BASE_URL": "https://your-project.vercel.app/api",
-    "VITE_WS_BASE_URL": "wss://your-project.vercel.app/api",
-    "VITE_API_SERVER_URL": "https://your-project.vercel.app/api",
+    "VITE_API_BASE_URL": "/api",
+    "VITE_WS_BASE_URL": "/api",
+    "VITE_API_SERVER_URL": "/api",
     "SUPABASE_SERVICE_ROLE_KEY": "@supabase_service_role_key",
     "VITE_API_ADMIN_KEY": "@api_admin_key"
   },
