@@ -1,12 +1,18 @@
 <p align="right">
    <strong>中文</strong> | <a href="./README.en.md">English</a>
 </p>
-<div>
+
+<div align="center">
 
 ![BOT_WEB](./img/logo.png)
 # BOT_WEB_PRO
-## 📝 项目说明
 
+🍂轻量型网页机器人管理平台🍂
+
+</div>
+
+
+## 📝 项目说明
 > [!NOTE]  
 > 本项目为开源项目，在[BOT_WEB](https://github.com/kilimro/bot_web)的基础上进行重构
 
