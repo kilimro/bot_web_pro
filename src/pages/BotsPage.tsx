@@ -12,8 +12,8 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 // 代理地区配置，可手动编辑
 const REGION_PROXIES = [
-  { label: '北京(默认)', value: 'beijing', proxy: '' }, // 默认
-  { label: '河南', value: 'henan', proxy: 'socks5://GP0X6IG93S:91563817@106.42.31.35:13519' },
+  { label: '本机(默认)', value: 'beijing', proxy: '' }, // 默认
+  { label: '河南', value: 'henan', proxy: 'socks5://GP0X6IG93S:91563817@127.0.0.1:13519' },
   // 可继续添加更多地区
 ];
 
