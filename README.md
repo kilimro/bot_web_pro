@@ -14,12 +14,12 @@ BOT_WEB的美化版，在原版的基础上美化了页面布局，新增注册�
 ![部署效果图1](./img/777.png)
 ![部署效果图1](./img/888.png)
 ### 特殊说明
-1.登录代理可以在src/pages/BotsPage.tsx中修改，格式如下：
-``const REGION_PROXIES = [
+登录代理可以在src/pages/BotsPage.tsx中修改，格式如下：
+`const REGION_PROXIES = [
   { label: '北京(默认)', value: 'beijing', proxy: '' }, // 协议部署的地址字段
   { label: '河南', value: 'henan', proxy: 'socks5://GP0X6IG93S:91563817@127.0.0.1:13519' },
   // 可继续添加更多地区
-];``
+];`
 ## 🚀 快速部署
 
 ### 方案一：Vercel 一键部署（推荐）
