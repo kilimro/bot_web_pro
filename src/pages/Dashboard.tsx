@@ -362,14 +362,14 @@ const Dashboard: React.FC = () => {
             <img src="/img/ai_tool_5.png" alt="好友管理" className="w-12 h-12 object-contain" />
             <div>
               <div className="text-base font-bold text-gray-900 mb-1 flex items-center">好友管理 <span className="ml-2 text-xs bg-pink-100 text-pink-500 rounded px-2 py-0.5 font-semibold">NEW</span></div>
-              <div className="text-gray-500 text-sm">管理微信好友列表</div>
+              <div className="text-gray-500 text-sm">管理好友列表</div>
             </div>
           </Link>
           <Link to="/bots/moments" className="bg-white rounded-2xl shadow-md p-6 flex items-center gap-4 hover:shadow-xl transition group relative">
             <img src="/img/ai_tool_6.png" alt="朋友圈管理" className="w-12 h-12 object-contain" />
             <div>
               <div className="text-base font-bold text-gray-900 mb-1 flex items-center">朋友圈管理 <span className="ml-2 text-xs bg-yellow-100 text-yellow-500 rounded px-2 py-0.5 font-semibold">NEW</span></div>
-              <div className="text-gray-500 text-sm">管理微信朋友圈内容</div>
+              <div className="text-gray-500 text-sm">管理朋友圈内容</div>
             </div>
           </Link>
           <Link to="/monitoring" className="bg-white rounded-2xl shadow-md p-6 flex items-center gap-4 hover:shadow-xl transition group relative">
