@@ -251,7 +251,7 @@ const QrCodeLoginModal: React.FC<QrCodeLoginModalProps> = ({ onClose, onSuccess,
                 <span className="w-2 h-2 bg-blue-400 rounded-full animate-bounce [animation-delay:0.4s]"></span>
               </div>
             </div>
-            <p className="mt-2 text-base text-blue-500 font-semibold tracking-wide animate-pulse">请用微信扫码并在手机上确认登录，正在检测扫码状态...</p>
+            <p className="mt-2 text-base text-blue-500 font-semibold tracking-wide animate-pulse">请用手机扫码并在手机上确认登录，正在检测扫码状态...</p>
           </div>
         ) : (
           <div className="text-center py-8">
