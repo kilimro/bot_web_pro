@@ -22,6 +22,7 @@ const REGION_PROXIES = [
   // 可继续添加更多地区
 ];
 ```
+#### 默认账号密码：admin@example.com 密码：admin，可以在下方数据库里改
 ## 🚀 快速部署
 
 ### 方案一：Vercel 一键部署（推荐）
