@@ -1,12 +1,25 @@
-# BOT_WEB
+<p align="right">
+   <strong>中文</strong> | <a href="./README.en.md">English</a>
+</p>
+<div align="center">
+
+![new-api](./img/logo.png)
+# BOT_WEB_PRO
 
 ## 简介
-这是一个前后端分离的项目（适配855）。后端使用 Node.js。前端代码位于项目录，后端代码在server里。该项目使用 Supabase 作为数据库//免费的，也可以私有化部署。
-有能力的二开吧，因工作时间有限，实在没时间开发了...
+BOT_WEB的美化版，在原版的基础上美化了页面布局，新增注册，登录代理，多用户使用等若干功能，后端使用 Node.js。前端代码位于项目录，后端代码在server里。该项目使用 Supabase 作为数据库//免费的，也可以私有化部署。
+欢迎各路大佬一起加入二开，因工作时间有限，实在没时间开发了...
 ### 部署效果展示
-![部署效果图0](./img/0.png)
-![部署效果图1](./img/1.png)
-
+![部署效果图0](./img/666.png)
+![部署效果图1](./img/777.png)
+![部署效果图1](./img/888.png)
+### 特殊说明
+1.登录代理可以在src/pages/BotsPage.tsx中修改，格式如下：
+``const REGION_PROXIES = [
+  { label: '北京(默认)', value: 'beijing', proxy: '' }, // 协议部署的地址字段
+  { label: '河南', value: 'henan', proxy: 'socks5://GP0X6IG93S:91563817@127.0.0.1:13519' },
+  // 可继续添加更多地区
+];``
 ## 🚀 快速部署
 
 ### 方案一：Vercel 一键部署（推荐）
