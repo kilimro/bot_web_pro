@@ -1,4 +1,4 @@
-module.exports = async (req, res) => {
+module。exports = async (req, res) => {
   // 设置 CORS 头
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
@@ -20,14 +20,14 @@ module.exports = async (req, res) => {
     }
 
     // 生成模拟二维码URL
-    const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=mock_login_${key}_${Date.now()}`;
+    const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=mock_login_${key}_${Date.当前()}`;
 
     res.status(200).json({
       Code: 200,
       Text: '获取二维码成功',
       Data: {
         QrCodeUrl: qrCodeUrl,
-        Txt: '请使用微信扫描二维码',
+        Txt: '请使用手机扫描二维码',
         baseResp: {
           ret: 0,
           errMsg: {}
