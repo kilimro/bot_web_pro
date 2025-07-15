@@ -6,9 +6,9 @@
 
 ![BOT_WEB](./img/logo.png)
 # BOT_WEB_PRO
-
 🍂轻量型网页机器人管理平台🍂
 
+![React](https://img.shields.io/badge/React-18.2+-61DAFB?logo=react) ![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-3178C6?logo=typescript) ![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-3.3+-06B6D4?logo=tailwind-css) ![Vite](https://img.shields.io/badge/Vite-4.0+-646CFF?logo=vite) ![Node.js](https://img.shields.io/badge/Node.js-20.0+-339933?logo=node.js) ![Stars](https://img.shields.io/github/stars/kilimro/bot_web_pro?label=收藏)
 </div>
 
 
